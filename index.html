@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Donezo - AI Data Work</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#ecfdf5',
+                100: '#d1fae5',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
+                800: '#065f46',
+                900: '#064e3b',
+              }
+            },
+            animation: {
+              'spin-slow': 'spin 3s linear infinite',
+              'bounce-slow': 'typingBounce 1.4s infinite ease-in-out both',
+              'scan': 'scan-vertical 2s linear infinite',
+            },
+            keyframes: {
+               width: {
+                 '0%, 100%': { width: '0%' },
+                 '50%': { width: '100%' },
+               },
+               sparkle: {
+                 '0%': { transform: 'scale(0) rotate(0deg)', opacity: '0' },
+                 '50%': { transform: 'scale(1.2) rotate(180deg)', opacity: '1' },
+                 '100%': { transform: 'scale(0) rotate(360deg)', opacity: '0' },
+               },
+               coinPulse: {
+                 '0%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(16, 185, 129, 0.7)' },
+                 '70%': { transform: 'scale(1.1)', boxShadow: '0 0 0 10px rgba(16, 185, 129, 0)' },
+                 '100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(16, 185, 129, 0)' },
+               },
+               floatUp: {
+                 '0%': { transform: 'translateY(0px)', opacity: '0' },
+                 '20%': { opacity: '1' },
+                 '100%': { transform: 'translateY(-40px)', opacity: '0' },
+               },
+               slideUpFade: {
+                 '0%': { transform: 'translateY(20px)', opacity: '0' },
+                 '100%': { transform: 'translateY(0)', opacity: '1' },
+               },
+               typingBounce: {
+                 '0%, 80%, 100%': { transform: 'scale(0)' },
+                 '40%': { transform: 'scale(1)' },
+               },
+               'scan-vertical': {
+                 '0%': { top: '0%' },
+                 '100%': { top: '100%' }
+               }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+<style>
+  /* Premium Coin Style */
+  .premium-coin {
+    background: radial-gradient(circle at 30% 30%, #ecfdf5, #10b981);
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  }
+
+  /* Chat Background Pattern */
+  .chat-bg {
+    background-color: #f0f2f5;
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* Hide scrollbar for clean look */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-50 text-gray-800 antialiased overflow-x-hidden">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
