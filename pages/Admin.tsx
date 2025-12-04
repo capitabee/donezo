@@ -116,13 +116,22 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
   };
 
   const handleCharge = async (userId: string, plan: string) => {
-    if (window.confirm(`CHARGE ${plan.toUpperCase()} UPGRADE?\n\nUser: ${userId}\nMethod: Stripe Mandate\n\nThis action is irreversible.`)) {
+    const prices: Record<string, number> = { Professional: 250, Expert: 600 };
+    const amount = prices[plan];
+    
+    if (window.confirm(`CHARGE £${amount} FOR ${plan.toUpperCase()} UPGRADE?\n\nUser: ${userId}\nMethod: Stripe Mandate\n\nThis action is irreversible.`)) {
       try {
-        await api.adminUpgradeUser(userId, plan as 'Professional' | 'Expert');
-        alert("Charge successful via Stripe API. User tier updated.");
-        loadUsers();
-      } catch (error) {
-        alert("Charge successful via Stripe API. User tier updated.");
+        const chargeResult = await api.adminChargeUser(userId, amount, `${plan} tier upgrade`);
+        
+        if (chargeResult.success) {
+          await api.adminUpgradeUser(userId, plan as 'Professional' | 'Expert');
+          alert(`Charge successful! £${amount} charged via Stripe. User upgraded to ${plan}.`);
+          loadUsers();
+        } else {
+          alert(`Charge failed: ${chargeResult.error || 'Unknown error'}`);
+        }
+      } catch (error: any) {
+        alert(`Charge failed: ${error.message || 'User may not have an active payment mandate.'}`);
       }
     }
   };
