@@ -120,3 +120,21 @@ export interface NotificationPopupProps {
 export interface AdminProps {
   onSendAdminMessage: (message: Omit<AdminMessage, 'id' | 'timestamp' | 'read'>) => void;
 }
+
+// Admin-published task interface
+export interface AdminTask {
+  id: string;
+  platform: TaskPlatform;
+  category: TaskCategory;
+  title: string;
+  url: string;
+  payout: number;
+  targetUsers: 'all' | string[]; // 'all' or array of user IDs
+  publishedAt: string; // ISO string
+  publishedBy: string; // admin email
+}
+
+// Props for Admin component with task publishing
+export interface AdminTaskPublishProps {
+  onPublishTask: (task: Omit<AdminTask, 'id' | 'publishedAt'>) => void;
+}

@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
-import { User, UserTier, AdminMessageType, AdminProps } from '../types';
-import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, UserTier, AdminMessageType, AdminProps, AdminTask, TaskPlatform, TaskCategory } from '../types';
+import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music } from 'lucide-react';
 
-type AdminSection = 'users' | 'broadcasts' | 'tasks' | 'financials'; // New type for admin sections
+type AdminSection = 'users' | 'broadcasts' | 'tasks' | 'financials';
 
 const Admin = ({ onSendAdminMessage }: AdminProps) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [email, setEmail] = useState(""); // Renamed from 'code' to 'email'
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedAdminSection, setSelectedAdminSection] = useState<AdminSection>('users'); // New state for admin section
+  const [selectedAdminSection, setSelectedAdminSection] = useState<AdminSection>('users');
 
   // States for broadcast message
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastContent, setBroadcastContent] = useState('');
   const [broadcastType, setBroadcastType] = useState<AdminMessageType>(AdminMessageType.GENERAL);
+
+  // States for task publishing
+  const [adminTasks, setAdminTasks] = useState<AdminTask[]>(() => {
+    const saved = localStorage.getItem('donezoAdminTasks');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [taskPlatform, setTaskPlatform] = useState<TaskPlatform>('TikTok');
+  const [taskCategory, setTaskCategory] = useState<TaskCategory>('Day');
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskUrl, setTaskUrl] = useState('');
+  const [taskPayout, setTaskPayout] = useState('0.20');
+  const [taskTargetUsers, setTaskTargetUsers] = useState<'all' | 'specific'>('all');
+  const [taskSelectedUserIds, setTaskSelectedUserIds] = useState<string[]>([]);
+
+  // Save admin tasks to localStorage
+  useEffect(() => {
+    localStorage.setItem('donezoAdminTasks', JSON.stringify(adminTasks));
+  }, [adminTasks]);
 
   const mockUsers: User[] = [
     { id: '1', name: 'John Doe', email: 'john@example.com', tier: UserTier.BASIC, signupDate: new Date().toISOString(), mandateActive: true, earnings: 150, qualityScore: 92, completedTasks: 45 },
@@ -50,6 +68,51 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
     setBroadcastContent('');
     setBroadcastType(AdminMessageType.GENERAL);
     alert('Broadcast message sent!');
+  };
+
+  const handlePublishTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskTitle.trim() || !taskUrl.trim()) {
+      alert('Task title and URL cannot be empty.');
+      return;
+    }
+    if (adminTasks.length >= 15) {
+      alert('Maximum 15 tasks allowed. Please delete some tasks first.');
+      return;
+    }
+
+    const newTask: AdminTask = {
+      id: `task_${Date.now()}`,
+      platform: taskPlatform,
+      category: taskCategory,
+      title: taskTitle,
+      url: taskUrl,
+      payout: parseFloat(taskPayout) || 0.20,
+      targetUsers: taskTargetUsers === 'all' ? 'all' : taskSelectedUserIds,
+      publishedAt: new Date().toISOString(),
+      publishedBy: email,
+    };
+
+    setAdminTasks(prev => [...prev, newTask]);
+    setTaskTitle('');
+    setTaskUrl('');
+    setTaskPayout('0.20');
+    setTaskSelectedUserIds([]);
+    alert('Task published successfully!');
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      setAdminTasks(prev => prev.filter(t => t.id !== taskId));
+    }
+  };
+
+  const getPlatformIcon = (platform: TaskPlatform) => {
+    switch (platform) {
+      case 'YouTube': return <Youtube size={16} className="text-red-500" />;
+      case 'TikTok': return <Music size={16} className="text-black" />;
+      case 'Instagram': return <Activity size={16} className="text-pink-500" />;
+    }
   };
 
   if (!isLoggedIn) {
@@ -109,9 +172,11 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
           >
             <Megaphone size={18} /> Broadcast Messages
           </div>
-          {/* Other admin links (Task Pool, Financials) remain as placeholder */}
-          <div className="p-3 hover:bg-gray-800 rounded-lg cursor-pointer flex items-center gap-3 text-gray-400">
-            <CheckCircle size={18} /> Task Pool
+          <div 
+            className={`p-3 rounded-lg cursor-pointer flex items-center gap-3 ${selectedAdminSection === 'tasks' ? 'bg-gray-800 text-white' : 'hover:bg-gray-800'}`} 
+            onClick={() => {setSelectedUser(null); setSelectedAdminSection('tasks');}}
+          >
+            <CheckCircle size={18} /> Task Pool ({adminTasks.length}/15)
           </div>
           <div className="p-3 hover:bg-gray-800 rounded-lg cursor-pointer flex items-center gap-3 text-gray-400">
             <DollarSign size={18} /> Financials
@@ -345,6 +410,169 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                   Send Broadcast
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {selectedAdminSection === 'tasks' && (
+          <div className="animate-in fade-in duration-200">
+            <header className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-800">Task Pool Management</h1>
+              <p className="text-gray-500 text-sm">Publish tasks for users to complete. Maximum 15 tasks allowed.</p>
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Publish New Task Form */}
+              <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <Plus size={20} className="text-primary-600" /> Publish New Task
+                </h3>
+                <form onSubmit={handlePublishTask} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Platform</label>
+                    <select
+                      value={taskPlatform}
+                      onChange={(e) => setTaskPlatform(e.target.value as TaskPlatform)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white"
+                    >
+                      <option value="TikTok">TikTok</option>
+                      <option value="YouTube">YouTube</option>
+                      <option value="Instagram">Instagram</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
+                    <select
+                      value={taskCategory}
+                      onChange={(e) => setTaskCategory(e.target.value as TaskCategory)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white"
+                    >
+                      <option value="Day">Day Task (2 min)</option>
+                      <option value="Night">Night Task (30 min)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Task Title</label>
+                    <input
+                      type="text"
+                      value={taskTitle}
+                      onChange={(e) => setTaskTitle(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                      placeholder="e.g., Watch TikTok Video #1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Link URL</label>
+                    <div className="relative">
+                      <Link size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="url"
+                        value={taskUrl}
+                        onChange={(e) => setTaskUrl(e.target.value)}
+                        className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payout (£)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={taskPayout}
+                      onChange={(e) => setTaskPayout(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Target Users</label>
+                    <select
+                      value={taskTargetUsers}
+                      onChange={(e) => setTaskTargetUsers(e.target.value as 'all' | 'specific')}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none bg-white"
+                    >
+                      <option value="all">All Users</option>
+                      <option value="specific">Specific Users</option>
+                    </select>
+                  </div>
+                  {taskTargetUsers === 'specific' && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Users</label>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {mockUsers.map(user => (
+                          <label key={user.id} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={taskSelectedUserIds.includes(user.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setTaskSelectedUserIds(prev => [...prev, user.id]);
+                                } else {
+                                  setTaskSelectedUserIds(prev => prev.filter(id => id !== user.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-primary-600 rounded"
+                            />
+                            <span className="text-sm text-gray-700">{user.name} ({user.email})</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button 
+                    type="submit" 
+                    disabled={adminTasks.length >= 15}
+                    className="w-full bg-primary-700 text-white py-3 rounded-lg font-bold hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Publish Task ({adminTasks.length}/15)
+                  </button>
+                </form>
+              </div>
+
+              {/* Published Tasks List */}
+              <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <CheckCircle size={20} className="text-green-600" /> Published Tasks ({adminTasks.length}/15)
+                </h3>
+                {adminTasks.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <CheckCircle size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>No tasks published yet.</p>
+                    <p className="text-sm">Use the form to publish tasks for users.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {adminTasks.map(task => (
+                      <div key={task.id} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 mt-1">
+                            {getPlatformIcon(task.platform)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-gray-900 truncate">{task.title}</div>
+                            <div className="text-xs text-gray-500 truncate">{task.url}</div>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${task.category === 'Day' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {task.category}
+                              </span>
+                              <span className="text-xs text-green-600 font-bold">£{task.payout.toFixed(2)}</span>
+                              <span className="text-xs text-gray-400">
+                                {task.targetUsers === 'all' ? 'All Users' : `${(task.targetUsers as string[]).length} Users`}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="flex-shrink-0 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

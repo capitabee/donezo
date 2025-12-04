@@ -69,7 +69,7 @@ const Tasks = () => {
             Daily Task Queue
           </h1>
           <p className="text-gray-500 mt-1 max-w-lg text-sm">
-            Complete your 15 daily tasks. Night tasks have strict background monitoring requirements.
+            Complete your {tasks.length} daily tasks. Night tasks have strict background monitoring requirements.
           </p>
         </div>
 
@@ -79,13 +79,13 @@ const Tasks = () => {
             onClick={() => setActiveTab('Day')}
             className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'Day' ? 'bg-orange-50 text-orange-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
           >
-            <Sun size={16} /> Day Tasks ({dayTasks.filter(t => t.status === 'Completed').length}/10)
+            <Sun size={16} /> Day Tasks ({dayTasks.filter(t => t.status === 'Completed').length}/{dayTasks.length})
           </button>
           <button
             onClick={() => setActiveTab('Night')}
             className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'Night' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
           >
-            <Moon size={16} /> Night Tasks ({nightTasks.filter(t => t.status === 'Completed').length}/5)
+            <Moon size={16} /> Night Tasks ({nightTasks.filter(t => t.status === 'Completed').length}/{nightTasks.length})
           </button>
         </div>
       </div>

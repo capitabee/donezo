@@ -45,53 +45,129 @@ const DashboardLayout = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Task Generation (daily)
-  useEffect(() => {
-    const newTasks: Task[] = [];
-    const baseId = new Date().toISOString().split('T')[0]; // Reset daily to get new tasks each day
-
+  // Generate default tasks as fallback
+  const generateDefaultTasks = (): Task[] => {
+    const baseId = new Date().toISOString().split('T')[0];
+    const defaultTasks: Task[] = [];
+    
     // 10 Day Tasks (5 TikTok, 5 Instagram)
     for (let i = 0; i < 5; i++) {
-      // TikTok
-      newTasks.push({
+      defaultTasks.push({
         id: `${baseId}-day-tiktok-${i}`,
         platform: 'TikTok',
         category: 'Day',
         title: `Open TikTok Link ${i + 1}`,
-        url: `https://www.tiktok.com/@tiktok/video/730000000${i}`, // Example TikTok links
+        url: `https://www.tiktok.com/@tiktok/video/730000000${i}`,
         payout: 0.20,
         status: 'Pending',
-        durationMinutes: 2 // 2 minutes for day tasks
+        durationMinutes: 2
       });
-      // Instagram
-      newTasks.push({
+      defaultTasks.push({
         id: `${baseId}-day-instagram-${i}`,
         platform: 'Instagram',
         category: 'Day',
-        title: `Open Instagram Reel Link ${i + 1}`,
-        url: `https://www.instagram.com/reel/CmD0k0c000${i}/?hl=en`, // Example Instagram links
+        title: `Open Instagram Reel ${i + 1}`,
+        url: `https://www.instagram.com/reel/CmD0k0c000${i}/?hl=en`,
         payout: 0.25,
         status: 'Pending',
-        durationMinutes: 2 // 2 minutes for day tasks
+        durationMinutes: 2
       });
     }
-
-    // 5 Night Tasks (YouTube Background)
+    
+    // 5 Night Tasks (YouTube)
     for (let i = 0; i < 5; i++) {
-      newTasks.push({
+      defaultTasks.push({
         id: `${baseId}-night-youtube-${i}`,
         platform: 'YouTube',
         category: 'Night',
         title: `YouTube Background Task ${i + 1}`,
-        url: `https://www.youtube.com/watch?v=dQw4w9WgXc${i}`, // Mock YouTube links
-        payout: 0.80, // Higher payout for night
-        status: 'Pending', // Will be locked by time check initially
-        durationMinutes: 30 // 30 minutes for night tasks
+        url: `https://www.youtube.com/watch?v=dQw4w9WgXc${i}`,
+        payout: 0.80,
+        status: 'Pending',
+        durationMinutes: 30
       });
     }
+    
+    return defaultTasks;
+  };
 
-    setTasks(newTasks);
-  }, [user.signupDate]); // Re-generate if user changes (for demo purposes, otherwise once per day for actual app)
+  // Load tasks from admin-published tasks in localStorage, with fallback to defaults
+  useEffect(() => {
+    const loadAdminTasks = () => {
+      const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
+      const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+      const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+      
+      let adminTasks: any[] = [];
+      
+      if (savedAdminTasks) {
+        adminTasks = JSON.parse(savedAdminTasks);
+      }
+      
+      // Determine source tasks - use admin tasks if available, otherwise generate defaults
+      let sourceTasks: Task[];
+      
+      if (adminTasks.length > 0) {
+        // Use admin-published tasks
+        sourceTasks = adminTasks.map((adminTask: any) => ({
+          id: adminTask.id,
+          platform: adminTask.platform,
+          category: adminTask.category,
+          title: adminTask.title,
+          url: adminTask.url,
+          payout: adminTask.payout,
+          status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
+          durationMinutes: adminTask.category === 'Day' ? 2 : 30
+        }));
+      } else {
+        // No admin tasks - always use default 15 tasks as fallback
+        const defaultTasks = generateDefaultTasks();
+        sourceTasks = defaultTasks.map(task => ({
+          ...task,
+          status: completedTaskIds.includes(task.id) ? 'Completed' as const : task.status
+        }));
+      }
+      
+      // Update tasks, preserving in-progress status for existing tasks
+      setTasks(prev => {
+        const prevIds = prev.map(t => t.id).sort().join(',');
+        const newIds = sourceTasks.map(t => t.id).sort().join(',');
+        
+        if (prevIds !== newIds) {
+          // Task list changed - use new source
+          return sourceTasks;
+        }
+        
+        // Same task IDs - merge to preserve in-progress status
+        return sourceTasks.map(newTask => {
+          const existingTask = prev.find(t => t.id === newTask.id);
+          if (existingTask && (existingTask.status === 'In Progress' || existingTask.status === 'Completed' || existingTask.status === 'Failed')) {
+            return { ...newTask, status: existingTask.status, startTime: existingTask.startTime, newTabWindow: existingTask.newTabWindow };
+          }
+          return newTask;
+        });
+      });
+    };
+
+    loadAdminTasks();
+
+    // Listen for localStorage changes (when admin publishes new tasks)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'donezoAdminTasks') {
+        loadAdminTasks();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also poll for changes every 5 seconds (for same-tab updates)
+    const pollInterval = setInterval(loadAdminTasks, 5000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(pollInterval);
+    };
+  }, []);
 
   // Time Window Management
   useEffect(() => {
@@ -145,6 +221,15 @@ const DashboardLayout = () => {
           task.newTabWindow.close();
         }
         addEarnings(task.payout);
+        
+        // Save completed task ID to localStorage
+        const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+        const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+        if (!completedTaskIds.includes(taskId)) {
+          completedTaskIds.push(taskId);
+          localStorage.setItem('donezoCompletedTasks', JSON.stringify(completedTaskIds));
+        }
+        
         return prev.map(t => t.id === taskId ? { ...t, status: 'Completed', startTime: undefined, newTabWindow: null } : t);
       }
       return prev;
