@@ -4,12 +4,13 @@
 
 Donezo is a comprehensive AI data annotation and task management platform that connects remote workers with AI training tasks. The platform features a tiered salary system, real-time task management, payment processing, and administrative controls. Users complete tasks on external platforms (YouTube, TikTok, Instagram) and earn payouts based on their tier level, with earnings capped at £650 (Basic), £1,500 (Professional), or £3,000 (Expert) monthly.
 
-## Recent Changes (December 2024)
+## Recent Changes (December 4, 2024)
 
 - **Manual Task Submission Flow**: Tasks now require manual submission - users click Start to open task link, then Submit when done for AI verification before funds are credited
 - **Task States**: New task states (In Progress → Verifying → Completed/Failed) with visual feedback in TaskCard
-- **AI Task Verification**: OpenAI verifies task completion based on time spent before approving earnings
-- **Stripe Mandate System**: Users can set up payment mandates for admin charging capabilities
+- **AI Task Verification**: OpenAI verifies task completion based on time spent before approving earnings (real API calls)
+- **Stripe Mandate System**: Real Stripe SetupIntent integration for payment mandates with Elements UI
+- **Type Safety Fixes**: Fixed Number() conversion for PostgreSQL DECIMAL values across Sidebar, Earnings, TaskCard, Admin, and App.tsx
 - **Admin Charge Feature**: Admins can charge users via stored payment methods (mandate-based)
 - **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, and OpenAI integrations
 - **API Keys Management**: Admin panel now includes API Keys section for one-click key replacement
