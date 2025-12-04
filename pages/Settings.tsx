@@ -1,10 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, DashboardOutletContext } from '../types';
-import { useOutletContext } from 'react-router-dom';
-import { User as UserIcon, Mail, Lock, CreditCard, Shield, Save, AlertTriangle, LogOut } from 'lucide-react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
+import { User as UserIcon, Mail, Lock, CreditCard, Shield, Save, AlertTriangle, LogOut, RefreshCw } from 'lucide-react';
+import api from '../services/api';
 
 const Settings = () => {
-  const { user } = useOutletContext<DashboardOutletContext>(); // Use Outlet context
+  const { user } = useOutletContext<DashboardOutletContext>();
+  const navigate = useNavigate();
+  const [mandateStatus, setMandateStatus] = useState({ mandateActive: false, hasPaymentMethod: false });
+  const [loadingMandate, setLoadingMandate] = useState(true);
+
+  useEffect(() => {
+    const fetchMandateStatus = async () => {
+      try {
+        const status = await api.getMandateStatus();
+        setMandateStatus(status);
+      } catch (error) {
+        console.error('Failed to fetch mandate status:', error);
+      } finally {
+        setLoadingMandate(false);
+      }
+    };
+    fetchMandateStatus();
+  }, []);
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -95,31 +113,54 @@ const Settings = () => {
               <h2 className="text-lg font-bold text-gray-800">Bank Mandate</h2>
             </div>
 
-            <div className="bg-green-50 border border-green-100 rounded-xl p-4 mb-6 relative z-10">
-              <div className="flex items-center gap-2 text-green-800 font-bold text-sm mb-1">
-                <Shield size={16} /> Mandate Active
+            {loadingMandate ? (
+              <div className="flex items-center justify-center py-8 relative z-10">
+                <RefreshCw size={24} className="animate-spin text-gray-400" />
               </div>
-              <p className="text-xs text-green-700">Your bank is successfully connected via Stripe Direct Debit.</p>
-            </div>
+            ) : mandateStatus.mandateActive ? (
+              <>
+                <div className="bg-green-50 border border-green-100 rounded-xl p-4 mb-6 relative z-10">
+                  <div className="flex items-center gap-2 text-green-800 font-bold text-sm mb-1">
+                    <Shield size={16} /> Mandate Active
+                  </div>
+                  <p className="text-xs text-green-700">Your payment method is connected via Stripe.</p>
+                </div>
 
-            <div className="space-y-3 relative z-10">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Bank</span>
-                <span className="font-medium text-gray-900">Chase Bank</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Account</span>
-                <span className="font-medium text-gray-900">**** 8829</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Status</span>
-                <span className="font-medium text-green-600">Verified</span>
-              </div>
-            </div>
+                <div className="space-y-3 relative z-10">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Status</span>
+                    <span className="font-medium text-green-600">Verified</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Payment Method</span>
+                    <span className="font-medium text-gray-900">Connected</span>
+                  </div>
+                </div>
 
-            <button className="w-full mt-6 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors relative z-10">
-              Update Payment Method
-            </button>
+                <button 
+                  onClick={() => navigate('/mandate')}
+                  className="w-full mt-6 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors relative z-10"
+                >
+                  Update Payment Method
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mb-6 relative z-10">
+                  <div className="flex items-center gap-2 text-yellow-800 font-bold text-sm mb-1">
+                    <AlertTriangle size={16} /> Mandate Required
+                  </div>
+                  <p className="text-xs text-yellow-700">Connect a payment method to receive salary payouts.</p>
+                </div>
+
+                <button 
+                  onClick={() => navigate('/mandate')}
+                  className="w-full py-3 bg-primary-700 text-white rounded-xl text-sm font-bold hover:bg-primary-800 transition-colors relative z-10"
+                >
+                  Connect Bank Account
+                </button>
+              </>
+            )}
           </div>
 
           {/* Danger Zone */}

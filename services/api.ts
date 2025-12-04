@@ -82,6 +82,10 @@ class ApiService {
     });
   }
 
+  async completeTask(taskId: string, timeSpent: number) {
+    return this.submitTask(taskId, timeSpent);
+  }
+
   async failTask(taskId: string) {
     return this.request(`/tasks/${taskId}/fail`, { method: 'POST' });
   }

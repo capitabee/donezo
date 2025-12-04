@@ -1,5 +1,7 @@
 import React, { useState, ReactElement, useEffect, useCallback, useRef } from 'react';
 import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext, useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import DashboardHome from './pages/DashboardHome';
@@ -663,37 +665,167 @@ const Signin = () => {
   );
 };
 
+const MandateForm = () => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: submitError, setupIntent } = await stripe.confirmSetup({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/#/dashboard/settings`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (submitError) {
+        setError(submitError.message || 'Failed to set up payment method');
+        setLoading(false);
+        return;
+      }
+
+      if (setupIntent?.payment_method) {
+        await api.confirmMandate(setupIntent.payment_method as string);
+        setSuccess(true);
+        setTimeout(() => navigate('/dashboard'), 2000);
+      }
+    } catch (err) {
+      setError('Failed to complete mandate setup');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="text-center">
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Bank Connected!</h2>
+        <p className="text-gray-500 text-sm">Your payment method has been saved. Redirecting...</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="mb-6">
+        <PaymentElement />
+      </div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+      <button 
+        type="submit"
+        disabled={!stripe || loading}
+        className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors disabled:opacity-50"
+      >
+        {loading ? 'Processing...' : 'Authorize Mandate'}
+      </button>
+    </form>
+  );
+};
+
 const Mandate = () => {
   const navigate = useNavigate();
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initStripe = async () => {
+      try {
+        const token = api.getToken();
+        if (!token) {
+          navigate('/signin');
+          return;
+        }
+
+        const config = await api.getStripeConfig();
+        if (config.publishableKey) {
+          setStripePromise(loadStripe(config.publishableKey));
+        }
+
+        const setupData = await api.setupMandate();
+        if (setupData.clientSecret) {
+          setClientSecret(setupData.clientSecret);
+        } else {
+          setError('Failed to initialize payment setup');
+        }
+      } catch (err) {
+        console.error('Stripe init error:', err);
+        setError('Failed to load payment form. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initStripe();
+  }, [navigate]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
-        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Connect Payment Method</h2>
+          <p className="text-gray-500 text-sm">
+            This authorizes Donezo to process salary payouts and verify your identity via Stripe.
+            <span className="block mt-2 font-bold text-gray-700">No payment is taken immediately.</span>
+          </p>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Connect Bank</h2>
-        <p className="text-gray-500 mb-8 text-sm">
-          This mandate authorizes Donezo to process salary payouts and verify your identity via Stripe.
-          <span className="block mt-2 font-bold text-gray-700">No payment is taken immediately.</span>
-        </p>
 
-        <div className="space-y-3 mb-8">
-          <div className="p-4 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-primary-500 transition-colors">
-            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-            <div className="font-medium">Chase Bank</div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-700"></div>
           </div>
-          <div className="p-4 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-primary-500 transition-colors">
-            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-            <div className="font-medium">Bank of America</div>
+        ) : error ? (
+          <div className="text-center">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 mb-4">
+              {error}
+            </div>
+            <button 
+              onClick={() => navigate('/dashboard')} 
+              className="text-primary-700 font-bold hover:underline"
+            >
+              Return to Dashboard
+            </button>
           </div>
-        </div>
+        ) : stripePromise && clientSecret ? (
+          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+            <MandateForm />
+          </Elements>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Unable to load payment form. Please refresh the page.
+          </div>
+        )}
 
         <button 
           onClick={() => navigate('/dashboard')} 
-          className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors"
+          className="w-full mt-4 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-colors"
         >
-          Authorize Mandate
+          Cancel
         </button>
       </div>
     </div>
