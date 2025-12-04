@@ -374,7 +374,7 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                           <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-bold">Active</span>
                         </td>
                         <td className="p-4 text-sm font-medium text-gray-600">{u.tier}</td>
-                        <td className="p-4 text-sm font-bold text-green-600">£{u.earnings.toFixed(2)}</td>
+                        <td className="p-4 text-sm font-bold text-green-600">£{(Number(u.earnings) || 0).toFixed(2)}</td>
                         <td className="p-4">
                           {u.mandateActive ? (
                             <span className="flex items-center gap-1 text-green-600 text-sm font-medium"><CheckCircle size={14} /> Active</span>
@@ -430,7 +430,7 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                      </div>
                      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                        <div className="flex items-center gap-2 text-gray-500 text-sm font-medium mb-2"><DollarSign size={16} /> Earnings</div>
-                       <div className="text-3xl font-bold text-green-600">£{selectedUser.earnings.toFixed(2)}</div>
+                       <div className="text-3xl font-bold text-green-600">£{(Number(selectedUser.earnings) || 0).toFixed(2)}</div>
                      </div>
                   </div>
 
@@ -640,7 +640,7 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                           {getPlatformIcon(task.platform)}
                           <div>
                             <div className="font-medium text-gray-900 text-sm">{task.title}</div>
-                            <div className="text-xs text-gray-500">{task.category} - £{task.payout.toFixed(2)}</div>
+                            <div className="text-xs text-gray-500">{task.category} - £{(Number(task.payout) || 0).toFixed(2)}</div>
                           </div>
                         </div>
                         <button 

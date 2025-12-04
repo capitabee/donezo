@@ -259,7 +259,7 @@ const DashboardLayout = () => {
         
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'Completed', startTime: undefined, newTabWindow: null } : t));
         
-        alert(`Task Verified!\n\n${result.verification.message}\n\nEarnings: +£${task.payout.toFixed(2)}`);
+        alert(`Task Verified!\n\n${result.verification.message}\n\nEarnings: +£${(Number(task.payout) || 0).toFixed(2)}`);
       } else {
         alert(`Task Needs Review\n\n${result.verification?.message || 'Please ensure you complete the full task duration.'}`);
       }

@@ -13,6 +13,7 @@ const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
   
+  const taskPayout = Number(task.payout) || 0;
   const isNight = task.category === 'Night';
   const isLocked = task.status === 'Locked';
   const isFailed = task.status === 'Failed';
@@ -105,7 +106,7 @@ const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
            <h3 className={`font-bold text-sm line-clamp-2 leading-tight ${isNight ? 'text-gray-100' : 'text-gray-800'}`}>
              {task.title}
            </h3>
-           <span className={`text-sm font-bold ${isNight ? 'text-green-400' : 'text-gray-900'}`}>£{task.payout.toFixed(2)}</span>
+           <span className={`text-sm font-bold ${isNight ? 'text-green-400' : 'text-gray-900'}`}>£{taskPayout.toFixed(2)}</span>
         </div>
         <p className={`text-xs truncate flex items-center gap-1 font-mono ${isNight ? 'text-gray-500' : 'text-gray-400'}`}>
           <ExternalLink size={10} /> {task.url.replace('https://', '')}
@@ -143,7 +144,7 @@ const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
           </div>
         ) : task.status === 'Completed' ? (
           <div className={`w-full py-2.5 border rounded-xl font-bold text-sm flex items-center justify-center gap-2 ${isNight ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-green-50 border-green-100 text-green-700'}`}>
-            <CheckCircle size={16} /> Completed +£{task.payout.toFixed(2)}
+            <CheckCircle size={16} /> Completed +£{taskPayout.toFixed(2)}
           </div>
         ) : task.status === 'Failed' ? (
           <div className="w-full py-2.5 bg-red-100 border border-red-200 text-red-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2">

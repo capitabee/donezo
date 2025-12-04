@@ -52,19 +52,20 @@ const useCountUp = (end: number, duration: number = 2000, start: number = 0) => 
 const Sidebar = ({ user, isAnimating }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const prevEarningsRef = useRef(user?.earnings || 0);
+  const userEarnings = Number(user?.earnings) || 0;
+  const prevEarningsRef = useRef(userEarnings);
 
   // Use the count up hook
   const displayEarnings = useCountUp(
-    user?.earnings || 0, 
+    userEarnings, 
     2000, 
     prevEarningsRef.current
   );
 
   // Update ref after render
   useEffect(() => {
-    prevEarningsRef.current = user?.earnings || 0;
-  }, [user?.earnings]);
+    prevEarningsRef.current = userEarnings;
+  }, [userEarnings]);
 
   const isActive = (path: string) => location.pathname === path;
 

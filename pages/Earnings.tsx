@@ -20,8 +20,9 @@ const Earnings = () => {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<{ name: string; amount: number }[]>([]);
 
+  const userEarnings = Number(user.earnings) || 0;
   const salaryCap = user.tier === UserTier.BASIC ? 650 : user.tier === UserTier.PROFESSIONAL ? 1500 : 3000;
-  const percentage = Math.min((user.earnings / salaryCap) * 100, 100);
+  const percentage = Math.min((userEarnings / salaryCap) * 100, 100);
 
   useEffect(() => {
     const loadEarnings = async () => {
@@ -56,13 +57,13 @@ const Earnings = () => {
   }, []);
 
   const defaultChartData = [
-    { name: 'Day 1', amount: user.earnings * 0.1 },
-    { name: 'Day 2', amount: user.earnings * 0.25 },
-    { name: 'Day 3', amount: user.earnings * 0.4 },
-    { name: 'Day 4', amount: user.earnings * 0.55 },
-    { name: 'Day 5', amount: user.earnings * 0.75 },
-    { name: 'Day 6', amount: user.earnings * 0.9 },
-    { name: 'Today', amount: user.earnings },
+    { name: 'Day 1', amount: userEarnings * 0.1 },
+    { name: 'Day 2', amount: userEarnings * 0.25 },
+    { name: 'Day 3', amount: userEarnings * 0.4 },
+    { name: 'Day 4', amount: userEarnings * 0.55 },
+    { name: 'Day 5', amount: userEarnings * 0.75 },
+    { name: 'Day 6', amount: userEarnings * 0.9 },
+    { name: 'Today', amount: userEarnings },
   ];
 
   const displayChartData = chartData.length > 0 ? chartData : defaultChartData;
@@ -114,7 +115,7 @@ const Earnings = () => {
             </span>
           </div>
           <div className="text-gray-500 text-sm font-medium">Current Balance</div>
-          <div className="text-2xl font-bold text-gray-800">£{user.earnings.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-gray-800">£{userEarnings.toFixed(2)}</div>
         </div>
 
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
