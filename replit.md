@@ -4,13 +4,42 @@
 
 Donezo is a comprehensive AI data annotation and task management platform that connects remote workers with AI training tasks. The platform features a tiered salary system, real-time task management, payment processing, and administrative controls. Users complete tasks on external platforms (YouTube, TikTok, Instagram) and earn payouts based on their tier level, with earnings capped at £650 (Basic), £1,500 (Professional), or £3,000 (Expert) monthly.
 
-The application is built as a single-page application (SPA) using React with TypeScript, featuring a mock authentication system and localStorage-based persistence. The frontend is fully functional with placeholder backend structure ready for implementation.
+## Recent Changes (December 2024)
+
+- **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, and OpenAI integrations
+- **API Keys Management**: Admin panel now includes API Keys section for one-click key replacement
+- **Stripe Integration**: Real payment processing for tier upgrades via Stripe checkout
+- **OpenAI Integration**: AI chat assistant that promotes company benefits and explains upgrade advantages
+- **Database Schema**: Complete Supabase schema in `database/supabase_schema.sql`
+- **Dual Server Architecture**: Frontend (port 5000) and backend (port 3001) running concurrently
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
+
+### Backend Architecture (Implemented)
+
+**Server Configuration:**
+- Express.js server running on port 3001
+- CORS enabled for frontend communication
+- Environment variables for API keys (Stripe, Supabase, OpenAI)
+
+**Services:**
+- `backend/src/services/stripeService.ts`: Stripe payment processing, checkout sessions, customer management
+- `backend/src/services/supabaseService.ts`: Supabase database operations for users, tasks, transactions
+- `backend/src/services/openaiService.ts`: OpenAI chat with company-promoting prompts, task verification
+
+**API Endpoints:**
+- POST `/api/auth/login`: User authentication
+- POST `/api/auth/register`: User registration
+- POST `/api/chat`: AI chat with OpenAI
+- POST `/api/upgrade`: Stripe checkout session creation
+- GET `/api/earnings`: User earnings and transaction history
+- GET `/api/admin/users`: Admin user management
+- POST `/api/admin/tasks`: Admin task creation
+- POST `/api/admin/broadcast`: Admin broadcast messages
 
 ### Frontend Architecture
 
@@ -20,153 +49,113 @@ Preferred communication style: Simple, everyday language.
 - Vite as the build tool and development server
 - Tailwind CSS (via CDN) for styling with custom theme extensions
 
-**State Management:**
-- React hooks (useState, useEffect, useCallback, useRef) for local state
-- Lifted state pattern in App.tsx for shared data between routes
-- localStorage for persistence of user data, tasks, and admin messages
-- No external state management library (Redux, Zustand) - relies on React Context via Outlet
+**API Service Layer:**
+- `services/api.ts`: Centralized API calls to backend
+- Handles authentication, tasks, earnings, chat, and admin operations
 
 **Component Architecture:**
 - Layout components: DashboardLayout (main shell), Sidebar, Topbar
 - Page components: Landing, DashboardHome, Tasks, Earnings, Upgrade, Settings, Support, Admin
 - Reusable components: TaskCard, ChatOverlay, NotificationPopup, RewardAnimation, CountdownTimer
-- Uses React Router's Outlet pattern to pass context down to nested routes
 
-**Key Design Patterns:**
-- **Compound Components:** DashboardLayout wraps all dashboard pages with consistent sidebar/topbar
-- **Render Props via Context:** useOutletContext() provides shared state (user, tasks, functions) to child routes
-- **Custom Hooks:** useCountUp for animated number counting in Sidebar
-- **Mock Data Strategy:** All data starts as mock/default but persists to localStorage for session continuity
+### Admin Panel Features
 
-### Data Flow & State Lifting
+**Sections:**
+1. **User Management**: View all users, earnings, tier status, mandate status
+2. **Broadcast Messages**: Send announcements to all users
+3. **Task Pool**: Publish up to 15 custom tasks with platform, payout, URL
+4. **API Keys**: One-click replacement for Stripe, OpenAI, Supabase keys
 
-**Centralized State in App.tsx:**
-- User profile (tier, earnings, quality score)
-- Tasks array with status tracking (Pending, In Progress, Completed, Failed, Locked)
-- Admin messages for notifications
-- Chat and notification overlay visibility
+**Admin Credentials:**
+- Email: privates786@gmail.com
+- Password: Rich@123
 
-**Key Functions Passed via Context:**
-- `addEarnings(amount)`: Updates user earnings with animation trigger
-- `startTask(id, url)`: Marks task as in-progress, opens external window, starts countdown
-- `completeTask(id)`: Updates task status, adds earnings, triggers reward animation
-- `failTask(id)`: Marks task as failed if time expires
-- `setIsChatOpen`, `setIsNotificationsOpen`: Toggle overlay visibility
+### Database Schema
 
-**Task Lifecycle:**
-1. Tasks are either published by admin via Task Pool or fall back to 15 default tasks (10 Day + 5 Night)
-2. Admin can publish tasks with platform (TikTok/YouTube/Instagram), link, payout, and target users (all or specific)
-3. User clicks "Start Task" → Opens external URL in new window
-4. Countdown begins (2 min for Day tasks, 30 min for Night tasks)
-5. User manually completes or countdown expires → Auto-fail
-6. Completed tasks add payout to user earnings and are saved to localStorage
+**Tables (Supabase):**
+- `users`: Profile, tier, earnings, quality score, Stripe customer ID
+- `user_sessions`: JWT tokens, expiry, IP tracking
+- `tasks`: Platform, category, URL, payout, target users
+- `task_completions`: User task progress, AI verification status
+- `transactions`: Earnings, payouts, upgrade fees
+- `admin_messages`: Broadcast notifications
+- `referrals`: User invitation tracking
 
-**Admin Task Pool (pages/Admin.tsx):**
-- Admin can publish up to 15 tasks with custom platform, link, payout, and target users
-- Tasks are stored in localStorage under 'donezoAdminTasks'
-- Users see admin-published tasks; if none exist, they see 15 default fallback tasks
-- Completed task IDs stored in 'donezoCompletedTasks' for persistence
+### Payment Integration
 
-### Authentication & Authorization
+**Stripe:**
+- Checkout sessions for tier upgrades (Professional: £250, Expert: £600)
+- Customer creation with platform metadata
+- Webhook handling for successful payments
 
-**Current Implementation (Mock):**
-- No real authentication - uses mock user object
-- Admin panel has hardcoded credentials (privates786@gmail.com / Rich@123)
-- User data loaded from localStorage or defaults to mock user
+**Tier Benefits:**
+- Basic: Free, £650/month cap, monthly payouts
+- Professional: £250, £1,500/month cap, 1.5x multiplier, weekly payouts
+- Expert: £600, £3,000/month cap, 3x multiplier, daily payouts
 
-**Planned Backend Integration:**
-- JWT-based authentication (backend/src/utils/jwt.ts placeholder exists)
-- Password hashing (backend/src/utils/password.ts placeholder)
-- Auth middleware (backend/src/middleware/authMiddleware.ts)
-- Session management (backend/src/models/userSessionModel.ts)
+### AI Integration
 
-### UI/UX Patterns
+**OpenAI Chat Assistant:**
+- Company-promoting system prompt as "Sarah" the Team Leader
+- Explains tier benefits and encourages upgrades
+- Answers questions about tasks, earnings, and platform
 
-**Animation & Feedback:**
-- Reward animation on task completion (coins flying to sidebar balance)
-- Count-up animations for earnings display
-- Pulse/glow effects for notifications and active states
-- Countdown timers for tasks in progress
+**Task Verification:**
+- AI verifies task completion based on time spent
+- Confidence scoring for fraud prevention
+- Auto-approval for tasks meeting time requirements
 
-**Responsive Design:**
-- Mobile-first Tailwind classes with md/lg breakpoints
-- Hidden elements on mobile (search bar, some stats)
-- Collapsible sidebar concept (not fully implemented)
+## Environment Variables
 
-**Color System:**
-- Primary green (#10b981) for earnings, success states
-- Night mode tasks use dark theme (gray-900 backgrounds)
-- Platform-specific colors (YouTube red, TikTok black, Instagram pink)
+Required secrets (stored in Replit Secrets):
+- `STRIPE_SECRET_KEY`: Stripe API secret key
+- `STRIPE_PUBLISHABLE_KEY`: Stripe public key
+- `OPENAI_API_KEY`: OpenAI API key for chat
+- `SUPABASE_URL`: Supabase project URL
+- `SUPABASE_ANON_KEY`: Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase admin key
 
-### Backend Structure (Placeholder)
+## Development
 
-**Planned MVC Architecture:**
-- Controllers: Handle business logic (auth, tasks, earnings, admin, files, notifications, stripe)
-- Models: Database interaction layer (users, tasks, files, messages, sessions, referrals)
-- Routes: Express route definitions (auth, admin, earnings, tasks, users, files, webhooks)
-- Middleware: Auth validation, error handling
-- Services: Third-party integrations (Gemini AI, Stripe, Supabase, OpenAI)
+**Running the Application:**
+```bash
+npm run dev  # Starts both frontend and backend concurrently
+```
 
-**Database Design (Not Yet Implemented):**
-- Users table: Profile, tier, earnings, signup date, mandate status
-- Tasks table: Platform, category, URL, payout, status, timestamps
-- Admin messages: Type, content, read status, targeting
-- User sessions: Auth tokens, expiry
-- Referrals: Tracking user invites
+**Build:**
+```bash
+npm run build  # Builds frontend for production
+```
 
-## External Dependencies
+**Database Setup:**
+1. Create a Supabase project
+2. Run `database/supabase_schema.sql` in SQL Editor
+3. Configure environment variables with Supabase credentials
 
-### Frontend Libraries
+## File Structure
 
-**Core:**
-- `react` & `react-dom` (v19.2): UI framework
-- `react-router-dom` (v7.9.6): Client-side routing
-- `typescript` (v5.8.2): Type safety
-- `vite` (v6.2.0): Build tool and dev server
-
-**UI & Icons:**
-- `lucide-react` (v0.555.0): Icon library
-- `recharts` (v3.5.1): Charts for earnings/analytics visualization
-- Tailwind CSS (via CDN): Utility-first styling
-
-**AI Integration:**
-- `@google/genai` (v1.30.0): Google Gemini API for AI task generation (services/geminiService.ts)
-
-### Planned Backend Dependencies
-
-**Payment Processing:**
-- Stripe API: Payment mandate creation, subscription charging, webhooks (backend/src/services/stripeService.ts)
-- GoCardless (mentioned but not scaffolded): Bank mandate verification
-
-**Database & Storage:**
-- Supabase: PostgreSQL database and authentication (backend/src/services/supabaseService.ts)
-- Note: Current app uses localStorage; migration to Supabase required
-
-**AI Services:**
-- OpenAI API: Task generation, content moderation (backend/src/services/openaiService.ts)
-- Google Gemini API: Already integrated on frontend, planned for backend validation
-
-### Configuration & Environment
-
-**Environment Variables:**
-- `GEMINI_API_KEY`: Google Gemini API key (defined in vite.config.ts)
-- Exposed to frontend as `process.env.API_KEY` and `process.env.GEMINI_API_KEY`
-
-**Build Configuration:**
-- Vite server: Port 5000, allows all hosts
-- TypeScript: ES2022 target, JSX transform, path aliases (`@/*`)
-- Dev server: Hot module replacement, react-refresh
-
-### Third-Party Integrations
-
-**Social Platforms (Task URLs):**
-- YouTube, TikTok, Instagram: Tasks require users to visit external URLs
-- New tab/window opened for task completion tracking
-
-**Payment Gateways (Planned):**
-- Stripe: Subscription payments for tier upgrades, mandate-based auto-charging
-- GoCardless: Bank mandate verification for UK direct debit
-
-**Communication:**
-- WhatsApp support integration (mentioned in Support page, not implemented)
-- Admin broadcast messaging system (stored in localStorage, needs backend persistence)
+```
+├── backend/
+│   └── src/
+│       ├── server.ts           # Express server entry point
+│       └── services/
+│           ├── stripeService.ts
+│           ├── supabaseService.ts
+│           └── openaiService.ts
+├── components/
+│   ├── ChatOverlay.tsx        # AI chat with OpenAI
+│   ├── Sidebar.tsx
+│   ├── Topbar.tsx
+│   └── ...
+├── pages/
+│   ├── Admin.tsx              # Admin panel with API keys
+│   ├── Upgrade.tsx            # Stripe checkout integration
+│   ├── Earnings.tsx           # Transaction history
+│   └── ...
+├── services/
+│   └── api.ts                 # Frontend API service
+├── database/
+│   └── supabase_schema.sql    # Database setup script
+├── types.ts
+└── App.tsx
+```

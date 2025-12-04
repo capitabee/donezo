@@ -1,5 +1,5 @@
 import React, { useState, ReactElement, useEffect, useCallback, useRef } from 'react';
-import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext } from 'react-router-dom';
+import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import DashboardHome from './pages/DashboardHome';
@@ -11,46 +11,62 @@ import Earnings from './pages/Earnings';
 import Settings from './pages/Settings';
 import Support from './pages/Support';
 import ChatOverlay from './components/ChatOverlay';
-import NotificationPopup from './components/NotificationPopup'; // New import
+import NotificationPopup from './components/NotificationPopup';
 import { User, UserTier, AdminMessage, AdminMessageType, DashboardOutletContext, Task, TaskCategory, TaskStatus } from './types';
+import api from './services/api';
 
-// Mock Auth Wrapper
 const DashboardLayout = () => {
-  // Mock User - loaded from localStorage or default
-  const [user, setUser] = useState<User>(() => {
-    const savedUser = localStorage.getItem('donezoUser');
-    return savedUser ? JSON.parse(savedUser) : {
-      id: 'user_123',
-      name: 'Totok Michael',
-      email: 'tmichael09@mail.com',
-      tier: UserTier.BASIC,
-      signupDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days ago for Day 15 task demo
-      mandateActive: true,
-      earnings: 450,
-      qualityScore: 88,
-      completedTasks: 12,
-      referralLink: ''
-    };
-  });
-
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false); // New state for notifications
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isEarningsAnimating, setIsEarningsAnimating] = useState(false);
   const [adminMessages, setAdminMessages] = useState<AdminMessage[]>(() => {
     const savedMessages = localStorage.getItem('donezoAdminMessages');
     return savedMessages ? JSON.parse(savedMessages) : [];
   });
 
-  // --- Lifted Tasks State and Logic ---
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Generate default tasks as fallback
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = api.getToken();
+        if (!token) {
+          navigate('/signin');
+          return;
+        }
+
+        const userData = await api.getMe();
+        setUser({
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          tier: userData.tier as UserTier,
+          signupDate: userData.signupDate,
+          mandateActive: userData.mandateActive,
+          earnings: userData.earnings,
+          qualityScore: userData.qualityScore,
+          completedTasks: userData.completedTasks,
+        });
+      } catch (error) {
+        console.error('Auth error:', error);
+        api.clearToken();
+        navigate('/signin');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [navigate]);
+
   const generateDefaultTasks = (): Task[] => {
     const baseId = new Date().toISOString().split('T')[0];
     const defaultTasks: Task[] = [];
     
-    // 10 Day Tasks (5 TikTok, 5 Instagram)
     for (let i = 0; i < 5; i++) {
       defaultTasks.push({
         id: `${baseId}-day-tiktok-${i}`,
@@ -74,7 +90,6 @@ const DashboardLayout = () => {
       });
     }
     
-    // 5 Night Tasks (YouTube)
     for (let i = 0; i < 5; i++) {
       defaultTasks.push({
         id: `${baseId}-night-youtube-${i}`,
@@ -91,85 +106,90 @@ const DashboardLayout = () => {
     return defaultTasks;
   };
 
-  // Load tasks from admin-published tasks in localStorage, with fallback to defaults
   useEffect(() => {
-    const loadAdminTasks = () => {
-      const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
-      const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
-      const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
-      
-      let adminTasks: any[] = [];
-      
-      if (savedAdminTasks) {
-        adminTasks = JSON.parse(savedAdminTasks);
-      }
-      
-      // Determine source tasks - use admin tasks if available, otherwise generate defaults
-      let sourceTasks: Task[];
-      
-      if (adminTasks.length > 0) {
-        // Use admin-published tasks
-        sourceTasks = adminTasks.map((adminTask: any) => ({
-          id: adminTask.id,
-          platform: adminTask.platform,
-          category: adminTask.category,
-          title: adminTask.title,
-          url: adminTask.url,
-          payout: adminTask.payout,
-          status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
-          durationMinutes: adminTask.category === 'Day' ? 2 : 30
-        }));
-      } else {
-        // No admin tasks - always use default 15 tasks as fallback
-        const defaultTasks = generateDefaultTasks();
-        sourceTasks = defaultTasks.map(task => ({
-          ...task,
-          status: completedTaskIds.includes(task.id) ? 'Completed' as const : task.status
-        }));
-      }
-      
-      // Update tasks, preserving in-progress status for existing tasks
-      setTasks(prev => {
-        const prevIds = prev.map(t => t.id).sort().join(',');
-        const newIds = sourceTasks.map(t => t.id).sort().join(',');
+    const loadTasks = async () => {
+      try {
+        const apiTasks = await api.getTasks();
+        if (apiTasks && apiTasks.length > 0) {
+          const formattedTasks: Task[] = apiTasks.map((t: any) => ({
+            id: t.id,
+            platform: t.platform,
+            category: t.category,
+            title: t.title,
+            url: t.url,
+            payout: t.payout,
+            status: t.status || 'Pending',
+            durationMinutes: t.category === 'Day' ? 2 : 30
+          }));
+          setTasks(formattedTasks);
+        } else {
+          const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
+          const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+          const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+          
+          let adminTasks: any[] = [];
+          if (savedAdminTasks) {
+            adminTasks = JSON.parse(savedAdminTasks);
+          }
+          
+          let sourceTasks: Task[];
+          if (adminTasks.length > 0) {
+            sourceTasks = adminTasks.map((adminTask: any) => ({
+              id: adminTask.id,
+              platform: adminTask.platform,
+              category: adminTask.category,
+              title: adminTask.title,
+              url: adminTask.url,
+              payout: adminTask.payout,
+              status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
+              durationMinutes: adminTask.category === 'Day' ? 2 : 30
+            }));
+          } else {
+            const defaultTasks = generateDefaultTasks();
+            sourceTasks = defaultTasks.map(task => ({
+              ...task,
+              status: completedTaskIds.includes(task.id) ? 'Completed' as const : task.status
+            }));
+          }
+          
+          setTasks(sourceTasks);
+        }
+      } catch (error) {
+        console.error('Failed to load tasks from API, using local:', error);
+        const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
+        const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+        const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
         
-        if (prevIds !== newIds) {
-          // Task list changed - use new source
-          return sourceTasks;
+        let adminTasks: any[] = [];
+        if (savedAdminTasks) {
+          adminTasks = JSON.parse(savedAdminTasks);
         }
         
-        // Same task IDs - merge to preserve in-progress status
-        return sourceTasks.map(newTask => {
-          const existingTask = prev.find(t => t.id === newTask.id);
-          if (existingTask && (existingTask.status === 'In Progress' || existingTask.status === 'Completed' || existingTask.status === 'Failed')) {
-            return { ...newTask, status: existingTask.status, startTime: existingTask.startTime, newTabWindow: existingTask.newTabWindow };
-          }
-          return newTask;
-        });
-      });
-    };
-
-    loadAdminTasks();
-
-    // Listen for localStorage changes (when admin publishes new tasks)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'donezoAdminTasks') {
-        loadAdminTasks();
+        let sourceTasks: Task[];
+        if (adminTasks.length > 0) {
+          sourceTasks = adminTasks.map((adminTask: any) => ({
+            id: adminTask.id,
+            platform: adminTask.platform,
+            category: adminTask.category,
+            title: adminTask.title,
+            url: adminTask.url,
+            payout: adminTask.payout,
+            status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
+            durationMinutes: adminTask.category === 'Day' ? 2 : 30
+          }));
+        } else {
+          sourceTasks = generateDefaultTasks();
+        }
+        
+        setTasks(sourceTasks);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    if (user) {
+      loadTasks();
+    }
+  }, [user]);
 
-    // Also poll for changes every 5 seconds (for same-tab updates)
-    const pollInterval = setInterval(loadAdminTasks, 5000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(pollInterval);
-    };
-  }, []);
-
-  // Time Window Management
   useEffect(() => {
     const checkTimeWindows = () => {
       const now = new Date();
@@ -184,23 +204,24 @@ const DashboardLayout = () => {
 
         if (t.category === 'Day') {
           return { ...t, status: isDayActive ? 'Pending' : 'Locked' };
-        } else { // Night Task
+        } else {
           return { ...t, status: isNightActive ? 'Pending' : 'Locked' };
         }
       }));
     };
 
     checkTimeWindows();
-    const interval = setInterval(checkTimeWindows, 60000); // Check every minute
+    const interval = setInterval(checkTimeWindows, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const sendHeartbeat = (taskId: string) => {
-    // console.log(`Heartbeat sent for ${taskId}`);
-    // In real app, ping backend to verify tab is still open
-  };
-
-  const failTask = useCallback((taskId: string) => {
+  const failTask = useCallback(async (taskId: string) => {
+    try {
+      await api.failTask(taskId);
+    } catch (error) {
+      console.error('Failed to fail task:', error);
+    }
+    
     setTasks(prev => prev.map(t => {
       if (t.id === taskId && t.status !== 'Completed') {
         if (t.newTabWindow && !t.newTabWindow.closed) {
@@ -212,17 +233,23 @@ const DashboardLayout = () => {
     }));
   }, []);
 
-  const completeTask = useCallback((taskId: string) => {
-    setTasks(prev => {
-      const task = prev.find(t => t.id === taskId);
-      if (task && task.status !== 'Completed' && task.status !== 'Failed') {
-        // Close the opened window if it's still open
+  const completeTask = useCallback(async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.status === 'Completed' || task.status === 'Failed') return;
+
+    const timeSpent = task.startTime ? (Date.now() - task.startTime) / 1000 : task.durationMinutes * 60;
+    
+    try {
+      const result = await api.completeTask(taskId, timeSpent);
+      
+      if (result.success && result.verification?.status === 'approved') {
         if (task.newTabWindow && !task.newTabWindow.closed) {
           task.newTabWindow.close();
         }
-        addEarnings(task.payout);
         
-        // Save completed task ID to localStorage
+        setUser(prev => prev ? { ...prev, earnings: prev.earnings + task.payout, completedTasks: prev.completedTasks + 1 } : prev);
+        setIsEarningsAnimating(true);
+        
         const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
         const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
         if (!completedTaskIds.includes(taskId)) {
@@ -230,14 +257,38 @@ const DashboardLayout = () => {
           localStorage.setItem('donezoCompletedTasks', JSON.stringify(completedTaskIds));
         }
         
-        return prev.map(t => t.id === taskId ? { ...t, status: 'Completed', startTime: undefined, newTabWindow: null } : t);
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'Completed', startTime: undefined, newTabWindow: null } : t));
+        
+        alert(`Task Verified!\n\n${result.verification.message}\n\nEarnings: +£${task.payout.toFixed(2)}`);
+      } else {
+        alert(`Task Needs Review\n\n${result.verification?.message || 'Please ensure you complete the full task duration.'}`);
       }
-      return prev;
-    });
-  }, [user.earnings]); // Added user.earnings to dependency array for addEarnings to be up-to-date
+    } catch (error) {
+      console.error('Failed to complete task via API:', error);
+      if (task.newTabWindow && !task.newTabWindow.closed) {
+        task.newTabWindow.close();
+      }
+      addEarnings(task.payout);
+      
+      const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+      const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+      if (!completedTaskIds.includes(taskId)) {
+        completedTaskIds.push(taskId);
+        localStorage.setItem('donezoCompletedTasks', JSON.stringify(completedTaskIds));
+      }
+      
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'Completed', startTime: undefined, newTabWindow: null } : t));
+    }
+  }, [tasks]);
 
-  const startTask = useCallback((taskId: string, url: string) => {
+  const startTask = useCallback(async (taskId: string, url: string) => {
     const openedWindow = window.open(url, '_blank');
+
+    try {
+      await api.startTask(taskId);
+    } catch (error) {
+      console.error('Failed to start task via API:', error);
+    }
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
@@ -247,7 +298,6 @@ const DashboardLayout = () => {
     }));
   }, []);
 
-  // Global Timer Loop for tasks
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -257,59 +307,52 @@ const DashboardLayout = () => {
           const elapsed = now - task.startTime;
           const durationMs = task.durationMinutes * 60 * 1000;
 
-          // Night Task Specific Logic (Tab Monitoring)
           if (task.category === 'Night') {
             if (task.newTabWindow && task.newTabWindow.closed) {
               failTask(task.id);
               return;
             }
-            if (Math.floor(now / 1000) % 10 === 0) { // Every 10 seconds
-              sendHeartbeat(task.id);
-            }
           }
 
-          // Auto-complete logic for all tasks
           if (elapsed >= durationMs) {
             completeTask(task.id);
           }
         }
       });
-    }, 1000); // Check every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [tasks, completeTask, failTask]);
 
-  // --- Auto-starting Time Tracker ---
   const [activeSessionDuration, setActiveSessionDuration] = useState(0);
-  const startTimeRef = useRef(Date.now()); // Store session start time
+  const startTimeRef = useRef(Date.now());
 
   useEffect(() => {
-    startTimeRef.current = Date.now(); // Reset start time on mount
+    startTimeRef.current = Date.now();
     const interval = setInterval(() => {
       setActiveSessionDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
     return () => clearInterval(interval);
-  }, []); // Run once on mount
+  }, []);
 
-  // Save user to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('donezoUser', JSON.stringify(user));
+    if (user) {
+      localStorage.setItem('donezoUser', JSON.stringify(user));
+    }
   }, [user]);
 
-  // Save admin messages to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('donezoAdminMessages', JSON.stringify(adminMessages));
   }, [adminMessages]);
 
-
   const addEarnings = (amount: number) => {
-    setUser((prev) => ({ ...prev, earnings: prev.earnings + amount }));
-    setIsEarningsAnimating(true); // Start animation
+    setUser((prev) => prev ? { ...prev, earnings: prev.earnings + amount } : prev);
+    setIsEarningsAnimating(true);
   };
 
   useEffect(() => {
     if (isEarningsAnimating) {
-      const timer = setTimeout(() => setIsEarningsAnimating(false), 2500); // Duration of animation
+      const timer = setTimeout(() => setIsEarningsAnimating(false), 2500);
       return () => clearTimeout(timer);
     }
   }, [isEarningsAnimating]);
@@ -322,7 +365,7 @@ const DashboardLayout = () => {
       read: false,
     };
     setAdminMessages((prev) => [...prev, newMessage]);
-    setIsNotificationsOpen(true); // Automatically open notifications when a new message is received from admin
+    setIsNotificationsOpen(true);
   };
 
   const markMessageAsRead = (id: string) => {
@@ -337,10 +380,24 @@ const DashboardLayout = () => {
 
   const unreadNotificationsCount = adminMessages.filter((msg) => !msg.read).length;
 
-  // Derived Task Counts for DashboardHome
   const tasksInProgressCount = tasks.filter(t => t.status === 'In Progress').length;
   const tasksPendingAvailabilityCount = tasks.filter(t => t.status === 'Locked' || (t.status === 'Pending' && !t.startTime)).length;
-  const totalTasksTodayCount = tasks.length; // Always 15 tasks generated per day
+  const totalTasksTodayCount = tasks.length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/signin" replace />;
+  }
 
   return (
     <div className="flex bg-gray-50 min-h-screen font-sans">
@@ -349,11 +406,10 @@ const DashboardLayout = () => {
         <Topbar
           user={user}
           onChatToggle={() => setIsChatOpen(!isChatOpen)}
-          unreadNotificationsCount={unreadNotificationsCount} // New prop
-          onShowNotifications={() => setIsNotificationsOpen(!isNotificationsOpen)} // New prop
+          unreadNotificationsCount={unreadNotificationsCount}
+          onShowNotifications={() => setIsNotificationsOpen(!isNotificationsOpen)}
         />
         <main>
-          {/* Outlet context for passing user, addEarnings, isEarningsAnimating to nested routes */}
           <Outlet context={{
             user,
             addEarnings,
@@ -383,83 +439,188 @@ const DashboardLayout = () => {
   );
 };
 
-// Signup Mock Page
 const Signup = () => {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
-                    <p className="text-gray-500">Join Donezo today.</p>
-                </div>
-                <form className="space-y-4">
-                    <input type="text" placeholder="Full Name" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
-                    <input type="email" placeholder="Email" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
-                    <input type="password" placeholder="Password" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
-                    <button type="button" onClick={() => window.location.hash = '#/mandate'} className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors">Sign Up</button>
-                </form>
-                <p className="text-center text-gray-500 mt-6">
-                    Already have an account?{' '}
-                    <a href="#/signin" className="text-primary-700 font-semibold hover:underline">Sign In</a>
-                </p>
-            </div>
-        </div>
-    )
-}
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-// Signin Mock Page
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await api.signup(email, password, name);
+      navigate('/mandate');
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
+          <p className="text-gray-500">Join Donezo today.</p>
+        </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input 
+            type="text" 
+            placeholder="Full Name" 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" 
+          />
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" 
+          />
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" 
+          />
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Creating Account...' : 'Sign Up'}
+          </button>
+        </form>
+        <p className="text-center text-gray-500 mt-6">
+          Already have an account?{' '}
+          <a href="#/signin" className="text-primary-700 font-semibold hover:underline">Sign In</a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const Signin = () => {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
-                    <p className="text-gray-500">Sign in to your account.</p>
-                </div>
-                <form className="space-y-4">
-                    <input type="email" placeholder="Email" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
-                    <input type="password" placeholder="Password" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
-                    <button type="button" onClick={() => window.location.hash = '#/dashboard'} className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors">Sign In</button>
-                </form>
-                <p className="text-center text-gray-500 mt-6">
-                    Don't have an account?{' '}
-                    <a href="#/signup" className="text-primary-700 font-semibold hover:underline">Sign Up</a>
-                </p>
-            </div>
-        </div>
-    )
-}
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-// Mandate Mock Page
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await api.signin(email, password);
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Sign in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
+          <p className="text-gray-500">Sign in to your account.</p>
+        </div>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" 
+          />
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" 
+          />
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
+        <p className="text-center text-gray-500 mt-6">
+          Don't have an account?{' '}
+          <a href="#/signup" className="text-primary-700 font-semibold hover:underline">Sign Up</a>
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const Mandate = () => {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
-                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Connect Bank</h2>
-                <p className="text-gray-500 mb-8 text-sm">
-                    This mandate authorizes Donezo to process salary payouts and verify your identity via Stripe/GoCardless.
-                    <span className="block mt-2 font-bold text-gray-700">No payment is taken immediately.</span>
-                </p>
-
-                <div className="space-y-3 mb-8">
-                    <div className="p-4 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-primary-500 transition-colors">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="font-medium">Chase Bank</div>
-                    </div>
-                    <div className="p-4 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-primary-500 transition-colors">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="font-medium">Bank of America</div>
-                    </div>
-                </div>
-
-                <button onClick={() => window.location.hash = '#/dashboard'} className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors">Authorize Mandate</button>
-            </div>
+  const navigate = useNavigate();
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
+        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
-    )
-}
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Connect Bank</h2>
+        <p className="text-gray-500 mb-8 text-sm">
+          This mandate authorizes Donezo to process salary payouts and verify your identity via Stripe.
+          <span className="block mt-2 font-bold text-gray-700">No payment is taken immediately.</span>
+        </p>
+
+        <div className="space-y-3 mb-8">
+          <div className="p-4 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-primary-500 transition-colors">
+            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+            <div className="font-medium">Chase Bank</div>
+          </div>
+          <div className="p-4 border rounded-xl flex items-center gap-3 cursor-pointer hover:border-primary-500 transition-colors">
+            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+            <div className="font-medium">Bank of America</div>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => navigate('/dashboard')} 
+          className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors"
+        >
+          Authorize Mandate
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const App = () => {
   const [adminMessages, setAdminMessages] = useState<AdminMessage[]>(() => {
@@ -490,15 +651,13 @@ const App = () => {
         <Route path="/mandate" element={<Mandate />} />
         <Route path="/admin" element={<Admin onSendAdminMessage={addAdminMessageFromAdmin} />} />
 
-        {/* Protected Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          {/* These components now use useOutletContext for user data */}
           <Route index element={<DashboardHome />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="upgrade" element={<Upgrade />} />
           <Route path="earnings" element={<Earnings />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="support" element="<Support />" />
+          <Route path="support" element={<Support />} />
         </Route>
       </Routes>
     </HashRouter>

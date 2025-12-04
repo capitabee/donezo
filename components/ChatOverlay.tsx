@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Paperclip, Mic, MoreVertical, Phone, Video, Check, CheckCheck } from 'lucide-react';
 import { User } from '../types';
+import api from '../services/api';
 
 interface ChatOverlayProps {
   isOpen: boolean;
@@ -20,14 +21,14 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: `Hi ${user.name.split(' ')[0]}! I'm Sarah, your dedicated Team Leader. Welcome to the team! 👋`,
+      text: `Hi ${user.name.split(' ')[0]}! I'm Sarah, your dedicated Team Leader. Welcome to the team!`,
       sender: 'agent',
       timestamp: '09:41 AM',
       status: 'read'
     },
     {
       id: '2',
-      text: 'If you have any questions about tasks or payments, feel free to ask me here.',
+      text: 'If you have any questions about tasks, earnings, or upgrading your tier, feel free to ask me here.',
       sender: 'agent',
       timestamp: '09:41 AM',
       status: 'read'
@@ -45,12 +46,13 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputText.trim()) return;
 
+    const userMessage = inputText.trim();
     const newMessage: Message = {
       id: Date.now().toString(),
-      text: inputText,
+      text: userMessage,
       sender: 'user',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'sent'
@@ -58,19 +60,32 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
 
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
+    setIsTyping(true);
 
-    // Simulate Agent Typing & Response
-    setTimeout(() => setIsTyping(true), 1000);
-    setTimeout(() => {
+    try {
+      const response = await api.chat(userMessage);
+      
       setIsTyping(false);
-      const responses = [
-        "That's a great question! Let me check that for you.",
-        "Sure thing. Your payment mandate is active, so you're all set.",
-        "Have you checked the instructions in the task description?",
-        "I'll escalate this to the tech team immediately.",
-        "Keep up the good work! Your quality score is looking great."
+      const agentMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: response.response,
+        sender: 'agent',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'read'
+      };
+      setMessages(prev => [...prev, agentMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      
+      const fallbackResponses = [
+        "That's a great question! At Donezo, we help you earn money by completing simple tasks on social media platforms.",
+        `As a ${user.tier} tier member, you're doing great! Consider upgrading to unlock higher earning potential.`,
+        "Tasks are simple - just open the link, watch the content, and get paid. Day tasks take 2 minutes, Night tasks take 30 minutes.",
+        "Your quality score affects your earnings multiplier. Keep completing tasks on time to maintain a high score!",
+        "Professional tier members earn 1.5x more per task and have weekly payouts. Expert members get 3x earnings and daily payouts!"
       ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
       
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -80,7 +95,7 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
         status: 'read'
       };
       setMessages(prev => [...prev, agentMessage]);
-    }, 3500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -92,7 +107,6 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
   return (
     <div className={`fixed bottom-6 right-6 w-[380px] h-[600px] bg-white rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden border border-gray-100 transition-all duration-300 transform ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
       
-      {/* Header */}
       <div className="bg-primary-700 p-4 flex items-center justify-between text-white shadow-md z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -103,7 +117,7 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
           </div>
           <div>
             <h3 className="font-bold text-sm leading-tight">Sarah Jenkins</h3>
-            <p className="text-[10px] text-primary-100 opacity-90">Team Leader • Online</p>
+            <p className="text-[10px] text-primary-100 opacity-90">Team Leader - Online</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -113,10 +127,8 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
         </div>
       </div>
 
-      {/* Messages Body */}
       <div className="flex-1 chat-bg overflow-y-auto p-4 space-y-4 no-scrollbar">
         
-        {/* Date Separator */}
         <div className="flex justify-center my-4">
           <span className="bg-gray-200 text-gray-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">Today</span>
         </div>
@@ -152,7 +164,6 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="bg-white p-3 border-t border-gray-100 flex items-center gap-2">
         <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
           <Paperclip size={20} />
@@ -163,7 +174,7 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Type a message..." 
+            placeholder="Ask about tasks, earnings, or upgrades..." 
             className="w-full bg-gray-100 text-gray-800 text-sm px-4 py-3 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-100 focus:bg-white transition-all"
           />
         </div>

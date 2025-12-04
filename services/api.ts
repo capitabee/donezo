@@ -1,0 +1,205 @@
+const API_BASE_URL = '/api';
+
+class ApiService {
+  private token: string | null = null;
+
+  constructor() {
+    this.token = localStorage.getItem('donezoToken');
+  }
+
+  setToken(token: string) {
+    this.token = token;
+    localStorage.setItem('donezoToken', token);
+  }
+
+  clearToken() {
+    this.token = null;
+    localStorage.removeItem('donezoToken');
+  }
+
+  getToken() {
+    return this.token || localStorage.getItem('donezoToken');
+  }
+
+  private async request(endpoint: string, options: RequestInit = {}) {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    const token = this.getToken();
+    if (token) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || 'Request failed');
+    }
+
+    return response.json();
+  }
+
+  async signup(email: string, password: string, name: string) {
+    const data = await this.request('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    });
+    this.setToken(data.token);
+    return data;
+  }
+
+  async signin(email: string, password: string) {
+    const data = await this.request('/auth/signin', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    this.setToken(data.token);
+    return data;
+  }
+
+  async getMe() {
+    return this.request('/auth/me');
+  }
+
+  async getTasks() {
+    return this.request('/tasks');
+  }
+
+  async startTask(taskId: string) {
+    return this.request(`/tasks/${taskId}/start`, { method: 'POST' });
+  }
+
+  async completeTask(taskId: string, timeSpent: number) {
+    return this.request(`/tasks/${taskId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ timeSpent }),
+    });
+  }
+
+  async failTask(taskId: string) {
+    return this.request(`/tasks/${taskId}/fail`, { method: 'POST' });
+  }
+
+  async getEarnings() {
+    return this.request('/earnings');
+  }
+
+  async chat(message: string) {
+    return this.request('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async upgrade(tier: 'Professional' | 'Expert') {
+    return this.request('/upgrade', {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
+    });
+  }
+
+  async getStripeConfig() {
+    return this.request('/stripe/config');
+  }
+
+  async adminLogin(email: string, password: string) {
+    const data = await this.request('/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem('donezoAdminToken', data.token);
+    return data;
+  }
+
+  private getAdminToken() {
+    return localStorage.getItem('donezoAdminToken');
+  }
+
+  private async adminRequest(endpoint: string, options: RequestInit = {}) {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    const token = this.getAdminToken();
+    if (token) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || 'Request failed');
+    }
+
+    return response.json();
+  }
+
+  async getAdminUsers() {
+    return this.adminRequest('/admin/users');
+  }
+
+  async getAdminStats() {
+    return this.adminRequest('/admin/stats');
+  }
+
+  async getAdminTasks() {
+    return this.adminRequest('/admin/tasks');
+  }
+
+  async createAdminTask(task: {
+    platform: string;
+    category: string;
+    title: string;
+    url: string;
+    payout: number;
+    targetUsers: 'all' | string[];
+  }) {
+    return this.adminRequest('/admin/tasks', {
+      method: 'POST',
+      body: JSON.stringify(task),
+    });
+  }
+
+  async deleteAdminTask(taskId: string) {
+    return this.adminRequest(`/admin/tasks/${taskId}`, { method: 'DELETE' });
+  }
+
+  async adminUpgradeUser(userId: string, tier: 'Professional' | 'Expert') {
+    return this.adminRequest(`/admin/users/${userId}/upgrade`, {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
+    });
+  }
+
+  async sendBroadcast(type: string, title: string, content: string, targetUsers?: string) {
+    return this.adminRequest('/admin/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({ type, title, content, targetUsers }),
+    });
+  }
+
+  async getApiKeys() {
+    return this.adminRequest('/admin/api-keys');
+  }
+
+  async updateApiKey(keyName: string, keyValue: string) {
+    return this.adminRequest(`/admin/api-keys/${keyName}`, {
+      method: 'PUT',
+      body: JSON.stringify({ keyValue }),
+    });
+  }
+}
+
+export const api = new ApiService();
+export default api;

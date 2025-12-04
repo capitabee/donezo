@@ -75,16 +75,16 @@ export interface DashboardOutletContext {
   user: User;
   addEarnings: (amount: number) => void;
   isEarningsAnimating: boolean;
-  tasks: Task[]; // Lifted tasks state
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>; // Lifted setTasks
-  startTask: (taskId: string, url: string) => void; // Lifted startTask
-  completeTask: (taskId: string) => void; // Lifted completeTask
-  failTask: (taskId: string) => void; // Lifted failTask
+  tasks: Task[];
+  setTasks: (tasks: Task[] | ((prev: Task[]) => Task[])) => void;
+  startTask: (taskId: string, url: string) => void;
+  completeTask: (taskId: string) => void;
+  failTask: (taskId: string) => void;
   tasksInProgressCount: number;
   tasksPendingAvailabilityCount: number;
   totalTasksTodayCount: number;
-  activeSessionDuration: number; // For auto-time tracker
-  setIsChatOpen: React.Dispatch<React.SetStateAction<boolean>>; // For reminder card
+  activeSessionDuration: number;
+  setIsChatOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 // Props for UserProvider (if used) or directly for components
