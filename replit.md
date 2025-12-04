@@ -12,6 +12,7 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 - **Stripe Mandate System**: Real Stripe SetupIntent integration for payment mandates with Elements UI
 - **Type Safety Fixes**: Fixed Number() conversion for PostgreSQL DECIMAL values across Sidebar, Earnings, TaskCard, Admin, and App.tsx
 - **Admin Charge Feature**: Admins can charge users via stored payment methods (mandate-based)
+- **Live Bank Balance**: When users connect via US bank account with Financial Connections, admins can view and refresh their live bank balance
 - **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, and OpenAI integrations
 - **API Keys Management**: Admin panel now includes API Keys section for one-click key replacement
 - **Stripe Integration**: Real payment processing for tier upgrades via Stripe checkout
