@@ -3,15 +3,35 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { 
-  userService, 
-  taskService, 
-  userTaskService, 
-  transactionService,
-  apiKeyService,
-  adminMessageService 
+  userService as supabaseUserService, 
+  taskService as supabaseTaskService, 
+  userTaskService as supabaseUserTaskService, 
+  transactionService as supabaseTransactionService,
+  apiKeyService as supabaseApiKeyService,
+  adminMessageService as supabaseAdminMessageService,
+  isSupabaseConfigured
 } from './services/supabaseService';
+import {
+  pgUserService,
+  pgTaskService,
+  pgUserTaskService,
+  pgTransactionService,
+  pgApiKeyService,
+  pgAdminMessageService,
+  isPostgresConfigured
+} from './services/postgresService';
 import stripeService from './services/stripeService';
 import openaiService from './services/openaiService';
+
+const usePostgres = isPostgresConfigured() && !isSupabaseConfigured();
+console.log(`Database mode: ${usePostgres ? 'PostgreSQL' : isSupabaseConfigured() ? 'Supabase' : 'Mock/Fallback'}`);
+
+const userService = usePostgres ? pgUserService : supabaseUserService;
+const taskService = usePostgres ? pgTaskService : supabaseTaskService;
+const userTaskService = usePostgres ? pgUserTaskService : supabaseUserTaskService;
+const transactionService = usePostgres ? pgTransactionService : supabaseTransactionService;
+const apiKeyService = usePostgres ? pgApiKeyService : supabaseApiKeyService;
+const adminMessageService = usePostgres ? pgAdminMessageService : supabaseAdminMessageService;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
