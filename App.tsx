@@ -313,6 +313,33 @@ const Signup = () => {
                     <input type="password" placeholder="Password" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
                     <button type="button" onClick={() => window.location.hash = '#/mandate'} className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors">Sign Up</button>
                 </form>
+                <p className="text-center text-gray-500 mt-6">
+                    Already have an account?{' '}
+                    <a href="#/signin" className="text-primary-700 font-semibold hover:underline">Sign In</a>
+                </p>
+            </div>
+        </div>
+    )
+}
+
+// Signin Mock Page
+const Signin = () => {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
+                <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
+                    <p className="text-gray-500">Sign in to your account.</p>
+                </div>
+                <form className="space-y-4">
+                    <input type="email" placeholder="Email" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="password" placeholder="Password" className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary-500" />
+                    <button type="button" onClick={() => window.location.hash = '#/dashboard'} className="w-full bg-primary-700 text-white py-4 rounded-xl font-bold hover:bg-primary-800 transition-colors">Sign In</button>
+                </form>
+                <p className="text-center text-gray-500 mt-6">
+                    Don't have an account?{' '}
+                    <a href="#/signup" className="text-primary-700 font-semibold hover:underline">Sign Up</a>
+                </p>
             </div>
         </div>
     )
@@ -374,6 +401,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/signin" element={<Signin />} />
         <Route path="/mandate" element={<Mandate />} />
         <Route path="/admin" element={<Admin onSendAdminMessage={addAdminMessageFromAdmin} />} />
 
