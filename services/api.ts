@@ -75,8 +75,8 @@ class ApiService {
     return this.request(`/tasks/${taskId}/start`, { method: 'POST' });
   }
 
-  async completeTask(taskId: string, timeSpent: number) {
-    return this.request(`/tasks/${taskId}/complete`, {
+  async submitTask(taskId: string, timeSpent: number) {
+    return this.request(`/tasks/${taskId}/submit`, {
       method: 'POST',
       body: JSON.stringify({ timeSpent }),
     });
@@ -84,6 +84,21 @@ class ApiService {
 
   async failTask(taskId: string) {
     return this.request(`/tasks/${taskId}/fail`, { method: 'POST' });
+  }
+
+  async setupMandate() {
+    return this.request('/billing/mandate/setup', { method: 'POST' });
+  }
+
+  async confirmMandate(paymentMethodId: string) {
+    return this.request('/billing/mandate/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ paymentMethodId }),
+    });
+  }
+
+  async getMandateStatus() {
+    return this.request('/billing/mandate/status');
   }
 
   async getEarnings() {
@@ -179,6 +194,13 @@ class ApiService {
     return this.adminRequest(`/admin/users/${userId}/upgrade`, {
       method: 'POST',
       body: JSON.stringify({ tier }),
+    });
+  }
+
+  async adminChargeUser(userId: string, amount: number, reason: string) {
+    return this.adminRequest(`/admin/users/${userId}/charge`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, reason }),
     });
   }
 

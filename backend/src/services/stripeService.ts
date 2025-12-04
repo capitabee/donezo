@@ -99,6 +99,49 @@ export const stripeService = {
     }
   },
 
+  async createSetupIntent(customerId: string): Promise<Stripe.SetupIntent | null> {
+    try {
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        usage: 'off_session',
+        metadata: {
+          purpose: 'platform_mandate'
+        }
+      });
+      return setupIntent;
+    } catch (error) {
+      console.error('Error creating setup intent:', error);
+      return null;
+    }
+  },
+
+  async chargeCustomer(
+    customerId: string, 
+    paymentMethodId: string, 
+    amountInPence: number, 
+    description: string
+  ): Promise<Stripe.PaymentIntent | null> {
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        customer: customerId,
+        payment_method: paymentMethodId,
+        amount: amountInPence,
+        currency: 'gbp',
+        off_session: true,
+        confirm: true,
+        description,
+        metadata: {
+          source: 'admin_charge'
+        }
+      });
+      return paymentIntent;
+    } catch (error) {
+      console.error('Error charging customer:', error);
+      return null;
+    }
+  },
+
   async chargeMandate(customerId: string, amount: number, description: string): Promise<Stripe.PaymentIntent | null> {
     try {
       const paymentMethods = await stripe.paymentMethods.list({

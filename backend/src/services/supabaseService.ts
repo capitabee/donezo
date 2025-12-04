@@ -40,6 +40,7 @@ export interface DBUser {
   completed_tasks: number;
   mandate_active: boolean;
   stripe_customer_id?: string;
+  payment_method_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -71,10 +72,11 @@ export interface DBTransaction {
   id: string;
   user_id: string;
   task_id?: string;
-  type: 'task_earning' | 'upgrade_payment' | 'payout';
+  type: 'task_earning' | 'upgrade_payment' | 'payout' | 'charge';
   amount: number;
   description: string;
   status: 'pending' | 'completed' | 'failed';
+  stripe_payment_intent_id?: string;
   created_at: string;
 }
 

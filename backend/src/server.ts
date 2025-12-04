@@ -184,7 +184,7 @@ app.post('/api/tasks/:taskId/start', authenticateToken, async (req: any, res) =>
   }
 });
 
-app.post('/api/tasks/:taskId/complete', authenticateToken, async (req: any, res) => {
+app.post('/api/tasks/:taskId/submit', authenticateToken, async (req: any, res) => {
   try {
     const { taskId } = req.params;
     const { timeSpent } = req.body;
@@ -222,7 +222,7 @@ app.post('/api/tasks/:taskId/complete', authenticateToken, async (req: any, res)
       });
     }
   } catch (error) {
-    console.error('Complete task error:', error);
+    console.error('Submit task error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -312,6 +312,81 @@ app.post('/api/upgrade', authenticateToken, async (req: any, res) => {
     res.json({ checkoutUrl: session.url });
   } catch (error) {
     console.error('Upgrade error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/billing/mandate/setup', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.stripe_customer_id) {
+      const customer = await stripeService.createCustomer(user.email, user.name);
+      if (customer) {
+        await userService.updateUser(user.id, { stripe_customer_id: customer.id } as any);
+        user.stripe_customer_id = customer.id;
+      }
+    }
+
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : 'http://localhost:5000';
+
+    const setupIntent = await stripeService.createSetupIntent(user.stripe_customer_id!);
+    
+    if (!setupIntent) {
+      return res.status(500).json({ error: 'Failed to create setup intent' });
+    }
+
+    res.json({ 
+      clientSecret: setupIntent.client_secret,
+      customerId: user.stripe_customer_id
+    });
+  } catch (error) {
+    console.error('Mandate setup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/billing/mandate/confirm', authenticateToken, async (req: any, res) => {
+  try {
+    const { paymentMethodId } = req.body;
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await userService.updateUser(user.id, { 
+      payment_method_id: paymentMethodId,
+      mandate_active: true 
+    } as any);
+
+    res.json({ success: true, mandateActive: true });
+  } catch (error) {
+    console.error('Mandate confirm error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/billing/mandate/status', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ 
+      mandateActive: user.mandate_active || false,
+      hasPaymentMethod: !!user.payment_method_id
+    });
+  } catch (error) {
+    console.error('Mandate status error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -421,6 +496,56 @@ app.post('/api/admin/users/:userId/upgrade', authenticateAdmin, async (req, res)
     res.json({ success: true });
   } catch (error) {
     console.error('Admin upgrade user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/admin/users/:userId/charge', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { amount, reason } = req.body;
+    
+    const user = await userService.getUserById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.mandate_active || !user.payment_method_id) {
+      return res.status(400).json({ error: 'User does not have an active payment mandate' });
+    }
+
+    if (!user.stripe_customer_id) {
+      return res.status(400).json({ error: 'User does not have a Stripe customer ID' });
+    }
+
+    const paymentIntent = await stripeService.chargeCustomer(
+      user.stripe_customer_id,
+      user.payment_method_id,
+      Math.round(amount * 100),
+      reason || 'Platform charge'
+    );
+
+    if (!paymentIntent) {
+      return res.status(500).json({ error: 'Failed to process charge' });
+    }
+
+    await transactionService.createTransaction({
+      user_id: userId,
+      type: 'charge',
+      amount: -amount,
+      description: reason || 'Admin charge',
+      status: paymentIntent.status === 'succeeded' ? 'completed' : 'pending',
+      stripe_payment_intent_id: paymentIntent.id
+    });
+
+    res.json({ 
+      success: true, 
+      paymentIntentId: paymentIntent.id,
+      status: paymentIntent.status 
+    });
+  } catch (error) {
+    console.error('Admin charge user error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

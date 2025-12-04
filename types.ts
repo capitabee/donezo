@@ -21,7 +21,7 @@ export interface User {
 
 export type TaskPlatform = 'YouTube' | 'TikTok' | 'Instagram';
 export type TaskCategory = 'Day' | 'Night';
-export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Failed' | 'Locked';
+export type TaskStatus = 'Pending' | 'In Progress' | 'Awaiting Submission' | 'Verifying' | 'Completed' | 'Failed' | 'Locked';
 
 export interface Task {
   id: string;
@@ -31,9 +31,11 @@ export interface Task {
   url: string;
   payout: number;
   status: TaskStatus;
-  startTime?: number; // Timestamp when task started
-  durationMinutes: number; // Duration required to complete
-  newTabWindow?: Window | null; // Reference to the opened window for monitoring
+  startTime?: number;
+  durationMinutes: number;
+  newTabWindow?: Window | null;
+  timeSpentSeconds?: number;
+  verificationMessage?: string;
 }
 
 export interface ChartData {
@@ -78,6 +80,7 @@ export interface DashboardOutletContext {
   tasks: Task[];
   setTasks: (tasks: Task[] | ((prev: Task[]) => Task[])) => void;
   startTask: (taskId: string, url: string) => void;
+  submitTask: (taskId: string) => Promise<{ success: boolean; message: string; earnings?: number }>;
   completeTask: (taskId: string) => void;
   failTask: (taskId: string) => void;
   tasksInProgressCount: number;

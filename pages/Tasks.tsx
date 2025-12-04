@@ -1,26 +1,22 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { User, Task, TaskCategory, TaskStatus, DashboardOutletContext } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { TaskCategory, DashboardOutletContext } from '../types';
 import { useOutletContext } from 'react-router-dom';
 import TaskCard from '../components/TaskCard';
 import RewardAnimation from '../components/RewardAnimation';
-import { RefreshCw, Sun, Moon, Info, Clock, AlertTriangle } from 'lucide-react';
+import { Sun, Moon, Info, Clock, AlertTriangle } from 'lucide-react';
 
 const Tasks = () => {
   const {
     user,
-    addEarnings,
     tasks,
-    setTasks,
     startTask,
-    completeTask,
+    submitTask,
     failTask,
-    setIsChatOpen // No direct usage here, but part of context
   } = useOutletContext<DashboardOutletContext>();
   const [showReward, setShowReward] = useState(false);
-  const [activeTab, setActiveTab] = useState<TaskCategory>('Day'); // UI toggle for viewing lists
+  const [activeTab, setActiveTab] = useState<TaskCategory>('Day');
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Update current time every minute for time window display
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -28,20 +24,19 @@ const Tasks = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Update completeTask to trigger reward animation
-  const handleCompleteTask = useCallback((taskId: string) => {
-    setShowReward(true); // Trigger reward animation
-    completeTask(taskId); // Call the lifted completeTask
-  }, [completeTask]);
+  const handleSubmitTask = useCallback(async (taskId: string) => {
+    const result = await submitTask(taskId);
+    if (result.success) {
+      setShowReward(true);
+    }
+    return result;
+  }, [submitTask]);
 
-
-  // Derived Stats
   const dayTasks = tasks.filter(t => t.category === 'Day');
   const nightTasks = tasks.filter(t => t.category === 'Night');
   const activeHours = currentTime.getHours();
   const isNightShift = activeHours >= 22 || activeHours < 6;
 
-  // Auto-switch active tab based on current time
   useEffect(() => {
     if (isNightShift && activeTab !== 'Night') {
       setActiveTab('Night');
@@ -50,12 +45,10 @@ const Tasks = () => {
     }
   }, [isNightShift, activeTab]);
 
-
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {showReward && <RewardAnimation onAnimationComplete={() => setShowReward(false)} />}
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -69,11 +62,10 @@ const Tasks = () => {
             Daily Task Queue
           </h1>
           <p className="text-gray-500 mt-1 max-w-lg text-sm">
-            Complete your {tasks.length} daily tasks. Night tasks have strict background monitoring requirements.
+            Complete your {tasks.length} daily tasks. Click Start to open the link, then Submit when done for AI verification.
           </p>
         </div>
 
-        {/* Tab Switcher */}
         <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
           <button
             onClick={() => setActiveTab('Day')}
@@ -90,12 +82,11 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Warning Banner for Night Tasks */}
       {activeTab === 'Night' && (isNightShift ? (
         <div className="mb-6 bg-blue-900 text-blue-100 p-4 rounded-xl flex items-start gap-3 border border-blue-700 shadow-lg shadow-blue-900/10">
            <AlertTriangle className="flex-shrink-0 text-yellow-400" size={20} />
            <div className="text-sm">
-             <strong>Critical Requirement:</strong> Night tasks run for 30 minutes. You must keep the YouTube tab open in the background. Closing the tab early will result in a <strong>FAILED</strong> status and reduce your weekly bonus.
+             <strong>How it works:</strong> Click "Start Task" to open the video. Watch/engage with the content, then return here and click "Submit Task" for AI verification. If approved, funds are credited instantly!
            </div>
         </div>
       ) : (
@@ -106,12 +97,12 @@ const Tasks = () => {
            </div>
         </div>
       ))}
+      
       {activeTab === 'Day' && (!isNightShift ? (
-        // Optional: Day task specific info if needed
-        <div className="mb-6 bg-orange-50 text-orange-700 p-4 rounded-xl flex items-start gap-3 border border-orange-100 shadow-lg shadow-orange-900/5">
-           <Info className="flex-shrink-0 text-orange-400" size={20} />
+        <div className="mb-6 bg-green-50 text-green-700 p-4 rounded-xl flex items-start gap-3 border border-green-100 shadow-lg shadow-green-900/5">
+           <Info className="flex-shrink-0 text-green-500" size={20} />
            <div className="text-sm">
-             <strong>Day Tasks:</strong> Quick engagement tasks. Each lasts for 2 minutes and has no penalty for early tab closure.
+             <strong>How it works:</strong> Click "Start Task" to open the content. Engage with it (watch, like, comment), then return and click "Submit Task". Our AI will verify your completion and credit your earnings!
            </div>
         </div>
       ) : (
@@ -123,16 +114,14 @@ const Tasks = () => {
         </div>
       ))}
 
-
-      {/* Task Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {(activeTab === 'Day' ? dayTasks : nightTasks).map((task) => (
           <TaskCard
             key={task.id}
             task={task}
             onStart={startTask}
-            onComplete={handleCompleteTask}
-            onFail={failTask} // Pass the failTask handler
+            onSubmit={handleSubmitTask}
+            onFail={failTask}
           />
         ))}
       </div>

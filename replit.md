@@ -6,6 +6,11 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 
 ## Recent Changes (December 2024)
 
+- **Manual Task Submission Flow**: Tasks now require manual submission - users click Start to open task link, then Submit when done for AI verification before funds are credited
+- **Task States**: New task states (In Progress → Verifying → Completed/Failed) with visual feedback in TaskCard
+- **AI Task Verification**: OpenAI verifies task completion based on time spent before approving earnings
+- **Stripe Mandate System**: Users can set up payment mandates for admin charging capabilities
+- **Admin Charge Feature**: Admins can charge users via stored payment methods (mandate-based)
 - **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, and OpenAI integrations
 - **API Keys Management**: Admin panel now includes API Keys section for one-click key replacement
 - **Stripe Integration**: Real payment processing for tier upgrades via Stripe checkout

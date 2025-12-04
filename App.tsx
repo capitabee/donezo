@@ -292,11 +292,88 @@ const DashboardLayout = () => {
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        return { ...t, status: 'In Progress', startTime: Date.now(), newTabWindow: openedWindow };
+        return { ...t, status: 'In Progress' as const, startTime: Date.now(), newTabWindow: openedWindow };
       }
       return t;
     }));
   }, []);
+
+  const submitTask = useCallback(async (taskId: string): Promise<{ success: boolean; message: string; earnings?: number }> => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+      return { success: false, message: 'Task not found' };
+    }
+
+    if (task.status === 'Completed') {
+      return { success: false, message: 'Task already completed' };
+    }
+
+    const timeSpent = task.startTime ? Math.floor((Date.now() - task.startTime) / 1000) : task.durationMinutes * 60;
+
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'Verifying' as const } : t));
+
+    try {
+      const result = await api.submitTask(taskId, timeSpent);
+      
+      if (result.success && result.verification?.status === 'approved') {
+        if (task.newTabWindow && !task.newTabWindow.closed) {
+          task.newTabWindow.close();
+        }
+        
+        setUser(prev => prev ? { 
+          ...prev, 
+          earnings: prev.earnings + task.payout, 
+          completedTasks: prev.completedTasks + 1 
+        } : prev);
+        setIsEarningsAnimating(true);
+        
+        const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+        const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+        if (!completedTaskIds.includes(taskId)) {
+          completedTaskIds.push(taskId);
+          localStorage.setItem('donezoCompletedTasks', JSON.stringify(completedTaskIds));
+        }
+        
+        setTasks(prev => prev.map(t => t.id === taskId ? { 
+          ...t, 
+          status: 'Completed' as const, 
+          startTime: undefined, 
+          newTabWindow: null,
+          verificationMessage: result.verification.message
+        } : t));
+        
+        return { 
+          success: true, 
+          message: result.verification.message || 'Task verified successfully!',
+          earnings: task.payout
+        };
+      } else {
+        setTasks(prev => prev.map(t => t.id === taskId ? { 
+          ...t, 
+          status: 'In Progress' as const,
+          verificationMessage: result.verification?.message
+        } : t));
+        
+        return { 
+          success: false, 
+          message: result.verification?.message || 'Task needs more time. Please complete the full duration.'
+        };
+      }
+    } catch (error) {
+      console.error('Failed to submit task via API:', error);
+      
+      setTasks(prev => prev.map(t => t.id === taskId ? { 
+        ...t, 
+        status: 'In Progress' as const,
+        verificationMessage: 'Verification failed. Please try again.'
+      } : t));
+      
+      return { 
+        success: false, 
+        message: 'Unable to verify task. Please try submitting again.'
+      };
+    }
+  }, [tasks]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -417,6 +494,7 @@ const DashboardLayout = () => {
             tasks,
             setTasks,
             startTask,
+            submitTask,
             completeTask,
             failTask,
             tasksInProgressCount,
