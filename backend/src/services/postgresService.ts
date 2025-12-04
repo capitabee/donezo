@@ -27,6 +27,11 @@ export interface DBUser {
   financial_connections_account_id?: string;
   bank_balance_cents?: number;
   bank_balance_updated_at?: string;
+  truelayer_access_token?: string;
+  truelayer_refresh_token?: string;
+  truelayer_token_expires_at?: string;
+  truelayer_connected?: boolean;
+  truelayer_account_id?: string;
   created_at: string;
   updated_at: string;
 }

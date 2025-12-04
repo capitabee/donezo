@@ -13,6 +13,7 @@ import Earnings from './pages/Earnings';
 import Settings from './pages/Settings';
 import Support from './pages/Support';
 import ChatOverlay from './components/ChatOverlay';
+import TrueLayerCallback from './pages/TrueLayerCallback';
 import NotificationPopup from './components/NotificationPopup';
 import { User, UserTier, AdminMessage, AdminMessageType, DashboardOutletContext, Task, TaskCategory, TaskStatus } from './types';
 import api from './services/api';
@@ -859,6 +860,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/signin" element={<Signin />} />
         <Route path="/mandate" element={<Mandate />} />
+        <Route path="/truelayer-callback" element={<TrueLayerCallback />} />
         <Route path="/admin" element={<Admin onSendAdminMessage={addAdminMessageFromAdmin} />} />
 
         <Route path="/dashboard" element={<DashboardLayout />}>

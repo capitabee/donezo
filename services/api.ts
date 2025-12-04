@@ -240,6 +240,30 @@ class ApiService {
       body: JSON.stringify({ keyValue }),
     });
   }
+
+  // TrueLayer UK Bank Connection
+  async getTrueLayerAuthUrl() {
+    return this.request('/truelayer/auth-url');
+  }
+
+  async completeTrueLayerCallback(code: string, state: string) {
+    return this.request('/truelayer/callback', {
+      method: 'POST',
+      body: JSON.stringify({ code, state }),
+    });
+  }
+
+  async getTrueLayerStatus() {
+    return this.request('/truelayer/status');
+  }
+
+  async disconnectTrueLayer() {
+    return this.request('/truelayer/disconnect', { method: 'DELETE' });
+  }
+
+  async getAdminUserTrueLayerBalance(userId: string) {
+    return this.adminRequest(`/admin/users/${userId}/truelayer-balance`);
+  }
 }
 
 export const api = new ApiService();

@@ -22,6 +22,7 @@ import {
 } from './services/postgresService';
 import stripeService from './services/stripeService';
 import openaiService from './services/openaiService';
+import truelayerService from './services/truelayerService';
 
 const usePostgres = isPostgresConfigured() && !isSupabaseConfigured();
 console.log(`Database mode: ${usePostgres ? 'PostgreSQL' : isSupabaseConfigured() ? 'Supabase' : 'Mock/Fallback'}`);
@@ -39,6 +40,7 @@ const JWT_SECRET = process.env.SESSION_SECRET || 'donezo-secret-key';
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const authenticateToken = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
@@ -523,6 +525,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
       hasBankAccess: !!(u as any).financial_connections_account_id,
       bankBalance: (u as any).bank_balance_cents ? Number((u as any).bank_balance_cents) / 100 : null,
       bankBalanceUpdatedAt: (u as any).bank_balance_updated_at,
+      truelayerConnected: !!(u as any).truelayer_connected,
       signupDate: u.created_at
     })));
   } catch (error) {
@@ -789,6 +792,245 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
 
 app.get('/api/stripe/config', (req, res) => {
   res.json({ publishableKey: stripeService.getPublishableKey() });
+});
+
+// TrueLayer Bank Connection Endpoints
+app.get('/api/truelayer/auth-url', authenticateToken, async (req: any, res) => {
+  try {
+    if (!truelayerService.isConfigured()) {
+      return res.status(503).json({ error: 'TrueLayer is not configured' });
+    }
+
+    const baseUrl = process.env.REPLIT_DOMAINS ? 
+      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
+      'http://localhost:5000';
+    // Backend handles the callback, then redirects to frontend
+    const redirectUri = `${baseUrl}/api/truelayer/oauth-callback`;
+    const state = Buffer.from(JSON.stringify({ userId: req.user.userId })).toString('base64');
+    
+    const authUrl = truelayerService.getAuthUrl(redirectUri, state);
+    res.json({ authUrl });
+  } catch (error) {
+    console.error('TrueLayer auth URL error:', error);
+    res.status(500).json({ error: 'Failed to generate auth URL' });
+  }
+});
+
+// TrueLayer OAuth callback - receives form_post from TrueLayer
+app.post('/api/truelayer/oauth-callback', async (req, res) => {
+  const baseUrl = process.env.REPLIT_DOMAINS ? 
+    `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
+    'http://localhost:5000';
+  
+  try {
+    const { code, state, error: authError } = req.body;
+    
+    if (authError) {
+      return res.redirect(`${baseUrl}/#/truelayer-callback?error=${encodeURIComponent(authError)}`);
+    }
+    
+    if (!code || !state) {
+      return res.redirect(`${baseUrl}/#/truelayer-callback?error=missing_params`);
+    }
+
+    let userId: string;
+    try {
+      const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+      userId = stateData.userId;
+    } catch {
+      return res.redirect(`${baseUrl}/#/truelayer-callback?error=invalid_state`);
+    }
+
+    const redirectUri = `${baseUrl}/api/truelayer/oauth-callback`;
+
+    const tokens = await truelayerService.exchangeCode(code, redirectUri);
+    if (!tokens) {
+      return res.redirect(`${baseUrl}/#/truelayer-callback?error=token_exchange_failed`);
+    }
+
+    // Get accounts to store the first account ID
+    const accounts = await truelayerService.getAccounts(tokens.access_token);
+    const accountId = accounts.length > 0 ? accounts[0].account_id : null;
+
+    // Calculate token expiry
+    const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
+
+    // Update user with TrueLayer credentials
+    await userService.updateUser(userId, {
+      truelayer_access_token: tokens.access_token,
+      truelayer_refresh_token: tokens.refresh_token,
+      truelayer_token_expires_at: expiresAt.toISOString(),
+      truelayer_connected: true,
+      truelayer_account_id: accountId
+    } as any);
+
+    // Redirect to frontend with success
+    res.redirect(`${baseUrl}/#/truelayer-callback?success=true`);
+  } catch (error) {
+    console.error('TrueLayer callback error:', error);
+    res.redirect(`${baseUrl}/#/truelayer-callback?error=server_error`);
+  }
+});
+
+// Also handle GET for error cases (some OAuth providers redirect with GET on errors)
+app.get('/api/truelayer/oauth-callback', async (req, res) => {
+  const baseUrl = process.env.REPLIT_DOMAINS ? 
+    `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
+    'http://localhost:5000';
+  
+  const error = req.query.error as string || 'cancelled';
+  res.redirect(`${baseUrl}/#/truelayer-callback?error=${encodeURIComponent(error)}`);
+});
+
+// Frontend callback endpoint for JSON API calls (for manual token exchange if needed)
+app.post('/api/truelayer/callback', async (req, res) => {
+  try {
+    const { code, state } = req.body;
+    
+    if (!code || !state) {
+      return res.status(400).json({ error: 'Missing code or state' });
+    }
+
+    let userId: string;
+    try {
+      const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+      userId = stateData.userId;
+    } catch {
+      return res.status(400).json({ error: 'Invalid state' });
+    }
+
+    const baseUrl = process.env.REPLIT_DOMAINS ? 
+      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
+      'http://localhost:5000';
+    const redirectUri = `${baseUrl}/api/truelayer/oauth-callback`;
+
+    const tokens = await truelayerService.exchangeCode(code, redirectUri);
+    if (!tokens) {
+      return res.status(400).json({ error: 'Failed to exchange authorization code' });
+    }
+
+    // Get accounts to store the first account ID
+    const accounts = await truelayerService.getAccounts(tokens.access_token);
+    const accountId = accounts.length > 0 ? accounts[0].account_id : null;
+
+    // Calculate token expiry
+    const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
+
+    // Update user with TrueLayer credentials
+    await userService.updateUser(userId, {
+      truelayer_access_token: tokens.access_token,
+      truelayer_refresh_token: tokens.refresh_token,
+      truelayer_token_expires_at: expiresAt.toISOString(),
+      truelayer_connected: true,
+      truelayer_account_id: accountId
+    } as any);
+
+    res.json({ success: true, accountConnected: !!accountId });
+  } catch (error) {
+    console.error('TrueLayer callback error:', error);
+    res.status(500).json({ error: 'Failed to complete bank connection' });
+  }
+});
+
+app.get('/api/truelayer/status', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      connected: !!(user as any).truelayer_connected,
+      hasAccount: !!(user as any).truelayer_account_id
+    });
+  } catch (error) {
+    console.error('TrueLayer status error:', error);
+    res.status(500).json({ error: 'Failed to get TrueLayer status' });
+  }
+});
+
+app.delete('/api/truelayer/disconnect', authenticateToken, async (req: any, res) => {
+  try {
+    await userService.updateUser(req.user.userId, {
+      truelayer_access_token: null,
+      truelayer_refresh_token: null,
+      truelayer_token_expires_at: null,
+      truelayer_connected: false,
+      truelayer_account_id: null
+    } as any);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('TrueLayer disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect bank' });
+  }
+});
+
+// Admin endpoint to get user's TrueLayer balance
+app.get('/api/admin/users/:userId/truelayer-balance', authenticateAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const { refresh } = req.query;
+    
+    const user = await userService.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const dbUser = user as any;
+    if (!dbUser.truelayer_connected || !dbUser.truelayer_access_token) {
+      return res.json({ 
+        connected: false,
+        hasBalance: false 
+      });
+    }
+
+    // Check if token is expired and refresh if needed
+    let accessToken = dbUser.truelayer_access_token;
+    const tokenExpiry = dbUser.truelayer_token_expires_at ? new Date(dbUser.truelayer_token_expires_at) : null;
+    
+    if (tokenExpiry && tokenExpiry < new Date() && dbUser.truelayer_refresh_token) {
+      const newTokens = await truelayerService.refreshToken(dbUser.truelayer_refresh_token);
+      if (newTokens) {
+        accessToken = newTokens.access_token;
+        const newExpiry = new Date(Date.now() + (newTokens.expires_in * 1000));
+        await userService.updateUser(userId, {
+          truelayer_access_token: newTokens.access_token,
+          truelayer_refresh_token: newTokens.refresh_token,
+          truelayer_token_expires_at: newExpiry.toISOString()
+        } as any);
+      } else {
+        return res.json({
+          connected: true,
+          hasBalance: false,
+          error: 'Token refresh failed'
+        });
+      }
+    }
+
+    // Get balance from TrueLayer
+    const balanceData = await truelayerService.getTotalBalance(accessToken);
+    
+    if (!balanceData) {
+      return res.json({
+        connected: true,
+        hasBalance: false,
+        error: 'Could not fetch balance'
+      });
+    }
+
+    res.json({
+      connected: true,
+      hasBalance: true,
+      balance: balanceData.total,
+      currency: balanceData.currency,
+      accounts: balanceData.accounts,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Admin TrueLayer balance error:', error);
+    res.status(500).json({ error: 'Failed to fetch TrueLayer balance' });
+  }
 });
 
 app.listen(PORT, () => {

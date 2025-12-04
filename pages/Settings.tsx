@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { User, DashboardOutletContext } from '../types';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { User as UserIcon, Mail, Lock, CreditCard, Shield, Save, AlertTriangle, LogOut, RefreshCw } from 'lucide-react';
+import { User as UserIcon, Mail, Lock, CreditCard, Shield, Save, AlertTriangle, LogOut, RefreshCw, Building2, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 
 const Settings = () => {
@@ -9,20 +9,50 @@ const Settings = () => {
   const navigate = useNavigate();
   const [mandateStatus, setMandateStatus] = useState({ mandateActive: false, hasPaymentMethod: false });
   const [loadingMandate, setLoadingMandate] = useState(true);
+  const [truelayerStatus, setTruelayerStatus] = useState({ connected: false, hasAccount: false });
+  const [loadingTruelayer, setLoadingTruelayer] = useState(true);
+  const [connectingTruelayer, setConnectingTruelayer] = useState(false);
 
   useEffect(() => {
-    const fetchMandateStatus = async () => {
+    const fetchStatuses = async () => {
       try {
-        const status = await api.getMandateStatus();
-        setMandateStatus(status);
+        const [mandate, truelayer] = await Promise.all([
+          api.getMandateStatus(),
+          api.getTrueLayerStatus().catch(() => ({ connected: false, hasAccount: false }))
+        ]);
+        setMandateStatus(mandate);
+        setTruelayerStatus(truelayer);
       } catch (error) {
-        console.error('Failed to fetch mandate status:', error);
+        console.error('Failed to fetch statuses:', error);
       } finally {
         setLoadingMandate(false);
+        setLoadingTruelayer(false);
       }
     };
-    fetchMandateStatus();
+    fetchStatuses();
   }, []);
+
+  const handleConnectUKBank = async () => {
+    try {
+      setConnectingTruelayer(true);
+      const { authUrl } = await api.getTrueLayerAuthUrl();
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Failed to get TrueLayer auth URL:', error);
+      alert('Failed to start bank connection. Please try again.');
+      setConnectingTruelayer(false);
+    }
+  };
+
+  const handleDisconnectUKBank = async () => {
+    if (!confirm('Are you sure you want to disconnect your UK bank account?')) return;
+    try {
+      await api.disconnectTrueLayer();
+      setTruelayerStatus({ connected: false, hasAccount: false });
+    } catch (error) {
+      console.error('Failed to disconnect TrueLayer:', error);
+    }
+  };
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -158,6 +188,73 @@ const Settings = () => {
                   className="w-full py-3 bg-primary-700 text-white rounded-xl text-sm font-bold hover:bg-primary-800 transition-colors relative z-10"
                 >
                   Connect Bank Account
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* UK Bank Connection via TrueLayer */}
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+               <Building2 size={100} className="text-blue-700" />
+            </div>
+            <div className="flex items-center gap-3 mb-6 relative z-10">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <Building2 size={20} />
+              </div>
+              <h2 className="text-lg font-bold text-gray-800">UK Bank (Open Banking)</h2>
+            </div>
+
+            {loadingTruelayer ? (
+              <div className="flex items-center justify-center py-8 relative z-10">
+                <RefreshCw size={24} className="animate-spin text-gray-400" />
+              </div>
+            ) : truelayerStatus.connected ? (
+              <>
+                <div className="bg-green-50 border border-green-100 rounded-xl p-4 mb-6 relative z-10">
+                  <div className="flex items-center gap-2 text-green-800 font-bold text-sm mb-1">
+                    <Shield size={16} /> Bank Connected
+                  </div>
+                  <p className="text-xs text-green-700">Your UK bank is connected via Open Banking.</p>
+                </div>
+
+                <div className="space-y-3 relative z-10">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Provider</span>
+                    <span className="font-medium text-gray-900">TrueLayer</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Status</span>
+                    <span className="font-medium text-green-600">Active</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleDisconnectUKBank}
+                  className="w-full mt-6 py-3 bg-white border border-red-200 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors relative z-10"
+                >
+                  Disconnect Bank
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 relative z-10">
+                  <div className="flex items-center gap-2 text-blue-800 font-bold text-sm mb-1">
+                    <Building2 size={16} /> Open Banking
+                  </div>
+                  <p className="text-xs text-blue-700">Connect your UK bank for balance verification. Secure and read-only.</p>
+                </div>
+
+                <button 
+                  onClick={handleConnectUKBank}
+                  disabled={connectingTruelayer}
+                  className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors relative z-10 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {connectingTruelayer ? (
+                    <><RefreshCw size={16} className="animate-spin" /> Connecting...</>
+                  ) : (
+                    <><ExternalLink size={16} /> Connect UK Bank</>
+                  )}
                 </button>
               </>
             )}

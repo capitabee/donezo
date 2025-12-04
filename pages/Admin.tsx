@@ -1,7 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserTier, AdminMessageType, AdminProps, AdminTask, TaskPlatform, TaskCategory } from '../types';
-import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music, Key, Settings, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music, Key, Settings, RefreshCw, Eye, EyeOff, Building2 } from 'lucide-react';
 import api from '../services/api';
+
+const TrueLayerBalanceSection = ({ userId, connected }: { userId: string; connected: boolean }) => {
+  const [balance, setBalance] = useState<{ balance: number; currency: string; accounts: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchBalance = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await api.getAdminUserTrueLayerBalance(userId);
+      if (result.hasBalance) {
+        setBalance({ balance: result.balance, currency: result.currency, accounts: result.accounts });
+        setLastUpdated(result.lastUpdated);
+      } else if (result.error) {
+        setError(result.error);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch balance');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (connected) {
+      fetchBalance();
+    }
+  }, [userId, connected]);
+
+  return (
+    <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+      <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <Building2 size={20} className="text-purple-500" /> Live Bank Balance (UK - TrueLayer)
+      </h3>
+      {connected ? (
+        loading ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw size={24} className="animate-spin text-purple-500" />
+          </div>
+        ) : balance ? (
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+            <div className="text-4xl font-bold text-purple-600 mb-2">
+              {balance.currency === 'GBP' ? '£' : balance.currency}{(Number(balance.balance) || 0).toFixed(2)}
+            </div>
+            <div className="text-xs text-purple-500">
+              {balance.accounts} account{balance.accounts !== 1 ? 's' : ''} connected
+            </div>
+            <div className="text-xs text-purple-400 mt-1">
+              Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Just now'}
+            </div>
+            <button 
+              onClick={fetchBalance}
+              disabled={loading}
+              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Balance
+            </button>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="font-bold text-red-600">Error fetching balance</div>
+            <div className="text-xs text-red-500">{error}</div>
+            <button 
+              onClick={fetchBalance}
+              className="mt-3 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-gray-500">
+            No balance data available
+          </div>
+        )
+      ) : (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+            <Building2 size={20} />
+          </div>
+          <div>
+            <div className="font-bold text-gray-600">No UK Bank Access</div>
+            <div className="text-xs text-gray-400">User needs to connect UK bank via Open Banking</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 type AdminSection = 'users' | 'broadcasts' | 'tasks' | 'apikeys' | 'financials';
 
@@ -77,7 +167,8 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
         completedTasks: u.completedTasks,
         hasBankAccess: u.hasBankAccess,
         bankBalance: u.bankBalance,
-        bankBalanceUpdatedAt: u.bankBalanceUpdatedAt
+        bankBalanceUpdatedAt: u.bankBalanceUpdatedAt,
+        truelayerConnected: u.truelayerConnected
       })));
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -488,7 +579,7 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
 
                   <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
                      <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-                       <DollarSign size={20} className="text-gray-400" /> Live Bank Balance
+                       <DollarSign size={20} className="text-gray-400" /> Live Bank Balance (US - Stripe)
                      </h3>
                      {(selectedUser as any).hasBankAccess ? (
                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
@@ -525,12 +616,14 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                            <DollarSign size={20} />
                          </div>
                          <div>
-                           <div className="font-bold text-gray-600">No Bank Access</div>
-                           <div className="text-xs text-gray-400">User needs to connect bank with Financial Connections</div>
+                           <div className="font-bold text-gray-600">No US Bank Access</div>
+                           <div className="text-xs text-gray-400">User needs to connect US bank with Financial Connections</div>
                          </div>
                        </div>
                      )}
                   </div>
+
+                  <TrueLayerBalanceSection userId={selectedUser.id} connected={(selectedUser as any).truelayerConnected} />
                 </div>
 
                 <div className="space-y-6">

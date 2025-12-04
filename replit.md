@@ -6,14 +6,20 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 
 ## Recent Changes (December 4, 2024)
 
+- **TrueLayer UK Bank Integration**: Users can connect UK banks via Open Banking for balance verification
+  - OAuth2 flow with form_post callback handling
+  - Token storage and automatic refresh
+  - Admin panel shows live UK bank balance alongside US Stripe balance
 - **Manual Task Submission Flow**: Tasks now require manual submission - users click Start to open task link, then Submit when done for AI verification before funds are credited
 - **Task States**: New task states (In Progress → Verifying → Completed/Failed) with visual feedback in TaskCard
 - **AI Task Verification**: OpenAI verifies task completion based on time spent before approving earnings (real API calls)
 - **Stripe Mandate System**: Real Stripe SetupIntent integration for payment mandates with Elements UI
 - **Type Safety Fixes**: Fixed Number() conversion for PostgreSQL DECIMAL values across Sidebar, Earnings, TaskCard, Admin, and App.tsx
 - **Admin Charge Feature**: Admins can charge users via stored payment methods (mandate-based)
-- **Live Bank Balance**: When users connect via US bank account with Financial Connections, admins can view and refresh their live bank balance
-- **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, and OpenAI integrations
+- **Live Bank Balance**: Dual bank balance support:
+  - US accounts via Stripe Financial Connections
+  - UK accounts via TrueLayer Open Banking
+- **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, OpenAI, and TrueLayer integrations
 - **API Keys Management**: Admin panel now includes API Keys section for one-click key replacement
 - **Stripe Integration**: Real payment processing for tier upgrades via Stripe checkout
 - **OpenAI Integration**: AI chat assistant that promotes company benefits and explains upgrade advantages
@@ -37,6 +43,7 @@ Preferred communication style: Simple, everyday language.
 - `backend/src/services/stripeService.ts`: Stripe payment processing, checkout sessions, customer management
 - `backend/src/services/supabaseService.ts`: Supabase database operations for users, tasks, transactions
 - `backend/src/services/openaiService.ts`: OpenAI chat with company-promoting prompts, task verification
+- `backend/src/services/truelayerService.ts`: TrueLayer Open Banking OAuth2 flow, token management, balance fetching
 
 **API Endpoints:**
 - POST `/api/auth/login`: User authentication
@@ -121,6 +128,8 @@ Required secrets (stored in Replit Secrets):
 - `SUPABASE_URL`: Supabase project URL
 - `SUPABASE_ANON_KEY`: Supabase anonymous key
 - `SUPABASE_SERVICE_ROLE_KEY`: Supabase admin key
+- `TRUELAYER_CLIENT_ID`: TrueLayer sandbox client ID for Open Banking
+- `TRUELAYER_CLIENT_SECRET`: TrueLayer sandbox client secret
 
 ## Development
 
@@ -155,9 +164,11 @@ npm run build  # Builds frontend for production
 │   ├── Topbar.tsx
 │   └── ...
 ├── pages/
-│   ├── Admin.tsx              # Admin panel with API keys
+│   ├── Admin.tsx              # Admin panel with API keys, bank balances
 │   ├── Upgrade.tsx            # Stripe checkout integration
 │   ├── Earnings.tsx           # Transaction history
+│   ├── Settings.tsx           # User settings, UK bank connection
+│   ├── TrueLayerCallback.tsx  # TrueLayer OAuth callback handler
 │   └── ...
 ├── services/
 │   └── api.ts                 # Frontend API service
