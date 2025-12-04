@@ -116,6 +116,63 @@ export const stripeService = {
     }
   },
 
+  async createSetupIntentWithBankAccess(customerId: string): Promise<Stripe.SetupIntent | null> {
+    try {
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ['us_bank_account'],
+        payment_method_options: {
+          us_bank_account: {
+            financial_connections: {
+              permissions: ['balances', 'payment_method'],
+              prefetch: ['balances']
+            }
+          }
+        },
+        usage: 'off_session',
+        metadata: {
+          purpose: 'platform_mandate_with_balance'
+        }
+      });
+      return setupIntent;
+    } catch (error) {
+      console.error('Error creating setup intent with bank access:', error);
+      return null;
+    }
+  },
+
+  async getFinancialConnectionsAccount(accountId: string): Promise<any | null> {
+    try {
+      const account = await stripe.financialConnections.accounts.retrieve(accountId);
+      return account;
+    } catch (error) {
+      console.error('Error retrieving financial connections account:', error);
+      return null;
+    }
+  },
+
+  async refreshAccountBalance(accountId: string): Promise<any | null> {
+    try {
+      const account = await stripe.financialConnections.accounts.refresh(accountId, {
+        features: ['balance']
+      });
+      return account;
+    } catch (error) {
+      console.error('Error refreshing account balance:', error);
+      return null;
+    }
+  },
+
+  async getPaymentMethodWithFinancialConnections(paymentMethodId: string): Promise<Stripe.PaymentMethod | null> {
+    try {
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      return paymentMethod;
+    } catch (error) {
+      console.error('Error retrieving payment method:', error);
+      return null;
+    }
+  },
+
   async chargeCustomer(
     customerId: string, 
     paymentMethodId: string, 

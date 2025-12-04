@@ -24,6 +24,9 @@ export interface DBUser {
   mandate_active: boolean;
   stripe_customer_id?: string;
   payment_method_id?: string;
+  financial_connections_account_id?: string;
+  bank_balance_cents?: number;
+  bank_balance_updated_at?: string;
   created_at: string;
   updated_at: string;
 }

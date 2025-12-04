@@ -105,6 +105,17 @@ class ApiService {
     return this.request('/billing/mandate/status');
   }
 
+  async setupBankAccount() {
+    return this.request('/billing/bank-account/setup', { method: 'POST' });
+  }
+
+  async confirmBankAccount(paymentMethodId: string, financialConnectionsAccountId: string) {
+    return this.request('/billing/bank-account/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ paymentMethodId, financialConnectionsAccountId }),
+    });
+  }
+
   async getEarnings() {
     return this.request('/earnings');
   }
@@ -206,6 +217,10 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ amount, reason }),
     });
+  }
+
+  async getAdminUserBalance(userId: string) {
+    return this.adminRequest(`/admin/users/${userId}/balance`);
   }
 
   async sendBroadcast(type: string, title: string, content: string, targetUsers?: string) {

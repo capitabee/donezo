@@ -74,7 +74,10 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
         mandateActive: u.mandateActive,
         earnings: u.earnings,
         qualityScore: u.qualityScore,
-        completedTasks: u.completedTasks
+        completedTasks: u.completedTasks,
+        hasBankAccess: u.hasBankAccess,
+        bankBalance: u.bankBalance,
+        bankBalanceUpdatedAt: u.bankBalanceUpdatedAt
       })));
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -359,6 +362,7 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                       <th className="p-4">Status</th>
                       <th className="p-4">Tier</th>
                       <th className="p-4">Earnings</th>
+                      <th className="p-4">Bank Balance</th>
                       <th className="p-4">Mandate</th>
                       <th className="p-4">Actions</th>
                     </tr>
@@ -375,6 +379,18 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                         </td>
                         <td className="p-4 text-sm font-medium text-gray-600">{u.tier}</td>
                         <td className="p-4 text-sm font-bold text-green-600">£{(Number(u.earnings) || 0).toFixed(2)}</td>
+                        <td className="p-4">
+                          {(u as any).hasBankAccess ? (
+                            <div>
+                              <div className="text-sm font-bold text-blue-600">${(Number((u as any).bankBalance) || 0).toFixed(2)}</div>
+                              {(u as any).bankBalanceUpdatedAt && (
+                                <div className="text-xs text-gray-400">Updated: {new Date((u as any).bankBalanceUpdatedAt).toLocaleTimeString()}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">No access</span>
+                          )}
+                        </td>
                         <td className="p-4">
                           {u.mandateActive ? (
                             <span className="flex items-center gap-1 text-green-600 text-sm font-medium"><CheckCircle size={14} /> Active</span>
@@ -456,6 +472,52 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                          <div>
                            <div className="font-bold text-red-800">Mandate Inactive</div>
                            <div className="text-xs text-red-600">User must reconnect bank account to proceed.</div>
+                         </div>
+                       </div>
+                     )}
+                  </div>
+
+                  <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                     <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                       <DollarSign size={20} className="text-gray-400" /> Live Bank Balance
+                     </h3>
+                     {(selectedUser as any).hasBankAccess ? (
+                       <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                         <div className="text-4xl font-bold text-blue-600 mb-2">
+                           ${(Number((selectedUser as any).bankBalance) || 0).toFixed(2)}
+                         </div>
+                         <div className="text-xs text-blue-500">
+                           Last updated: {(selectedUser as any).bankBalanceUpdatedAt 
+                             ? new Date((selectedUser as any).bankBalanceUpdatedAt).toLocaleString()
+                             : 'Never'}
+                         </div>
+                         <button 
+                           onClick={async () => {
+                             try {
+                               const result = await api.getAdminUserBalance(selectedUser.id);
+                               if (result.hasBalance && result.balance !== null) {
+                                 alert(`Updated balance: $${result.balance.toFixed(2)}`);
+                                 loadUsers();
+                               } else {
+                                 alert(result.message || 'Could not refresh balance');
+                               }
+                             } catch (error) {
+                               alert('Failed to refresh balance');
+                             }
+                           }}
+                           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                         >
+                           <RefreshCw size={14} /> Refresh Balance
+                         </button>
+                       </div>
+                     ) : (
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center gap-4">
+                         <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                           <DollarSign size={20} />
+                         </div>
+                         <div>
+                           <div className="font-bold text-gray-600">No Bank Access</div>
+                           <div className="text-xs text-gray-400">User needs to connect bank with Financial Connections</div>
                          </div>
                        </div>
                      )}

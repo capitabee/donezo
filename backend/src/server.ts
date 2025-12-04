@@ -411,6 +411,75 @@ app.get('/api/billing/mandate/status', authenticateToken, async (req: any, res) 
   }
 });
 
+app.post('/api/billing/bank-account/setup', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.stripe_customer_id) {
+      const customer = await stripeService.createCustomer(user.email, user.name);
+      if (!customer) {
+        return res.status(500).json({ error: 'Failed to create customer' });
+      }
+      await userService.updateUser(user.id, { stripe_customer_id: customer.id } as any);
+      user.stripe_customer_id = customer.id;
+    }
+
+    const setupIntent = await stripeService.createSetupIntentWithBankAccess(user.stripe_customer_id!);
+    
+    if (!setupIntent) {
+      return res.status(500).json({ error: 'Failed to create bank account setup' });
+    }
+
+    res.json({ 
+      clientSecret: setupIntent.client_secret,
+      customerId: user.stripe_customer_id
+    });
+  } catch (error) {
+    console.error('Bank account setup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/billing/bank-account/confirm', authenticateToken, async (req: any, res) => {
+  try {
+    const { paymentMethodId, financialConnectionsAccountId } = req.body;
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let bankBalance = null;
+    if (financialConnectionsAccountId) {
+      const fcAccount = await stripeService.getFinancialConnectionsAccount(financialConnectionsAccountId);
+      if (fcAccount && fcAccount.balance) {
+        bankBalance = fcAccount.balance.current?.usd || fcAccount.balance.cash?.available?.usd;
+      }
+    }
+
+    await userService.updateUser(user.id, { 
+      payment_method_id: paymentMethodId,
+      financial_connections_account_id: financialConnectionsAccountId,
+      bank_balance_cents: bankBalance,
+      bank_balance_updated_at: new Date().toISOString(),
+      mandate_active: true 
+    } as any);
+
+    res.json({ 
+      success: true, 
+      mandateActive: true,
+      bankBalance: bankBalance ? bankBalance / 100 : null
+    });
+  } catch (error) {
+    console.error('Bank account confirm error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/api/admin/login', async (req, res) => {
   const { email, password } = req.body;
   
@@ -451,6 +520,9 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
       qualityScore: u.quality_score,
       completedTasks: u.completed_tasks,
       mandateActive: u.mandate_active,
+      hasBankAccess: !!(u as any).financial_connections_account_id,
+      bankBalance: (u as any).bank_balance_cents ? Number((u as any).bank_balance_cents) / 100 : null,
+      bankBalanceUpdatedAt: (u as any).bank_balance_updated_at,
       signupDate: u.created_at
     })));
   } catch (error) {
@@ -566,6 +638,70 @@ app.post('/api/admin/users/:userId/charge', authenticateAdmin, async (req, res) 
     });
   } catch (error) {
     console.error('Admin charge user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/admin/users/:userId/balance', authenticateAdmin, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const fcAccountId = (user as any).financial_connections_account_id;
+    const cachedBalanceCents = (user as any).bank_balance_cents;
+    const cachedBalanceUpdatedAt = (user as any).bank_balance_updated_at;
+
+    if (!fcAccountId) {
+      return res.json({ 
+        hasBalance: false, 
+        message: 'User has not connected a bank account with balance access'
+      });
+    }
+
+    try {
+      const fcAccount = await stripeService.refreshAccountBalance(fcAccountId);
+      
+      if (fcAccount && fcAccount.balance) {
+        const balanceCents = fcAccount.balance.current?.usd || fcAccount.balance.cash?.available?.usd;
+        
+        if (balanceCents !== undefined && balanceCents !== null) {
+          const now = new Date().toISOString();
+          await userService.updateUser(user.id, {
+            bank_balance_cents: balanceCents,
+            bank_balance_updated_at: now
+          } as any);
+
+          return res.json({
+            hasBalance: true,
+            balance: balanceCents / 100,
+            lastUpdated: now,
+            refreshed: true
+          });
+        }
+      }
+      
+      return res.json({
+        hasBalance: true,
+        balance: cachedBalanceCents ? cachedBalanceCents / 100 : null,
+        lastUpdated: cachedBalanceUpdatedAt,
+        refreshed: false,
+        message: 'Balance refresh returned no data, showing cached value'
+      });
+    } catch (stripeError) {
+      console.error('Stripe balance refresh error:', stripeError);
+      return res.json({
+        hasBalance: true,
+        balance: cachedBalanceCents ? cachedBalanceCents / 100 : null,
+        lastUpdated: cachedBalanceUpdatedAt,
+        refreshed: false,
+        error: 'Could not refresh balance from bank'
+      });
+    }
+  } catch (error) {
+    console.error('Get user balance error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
