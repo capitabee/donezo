@@ -556,6 +556,70 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                       </div>
                    </div>
 
+                   <div className="bg-orange-600 text-white p-8 rounded-2xl shadow-lg">
+                      <h3 className="font-bold text-lg mb-2">Custom Charge</h3>
+                      <p className="text-orange-100 text-sm mb-4">Charge any amount to the user's connected payment method.</p>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-orange-100 text-xs font-medium mb-2">Amount (£)</label>
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            placeholder="Enter amount"
+                            id={`custom-charge-${selectedUser.id}`}
+                            className="w-full p-3 bg-orange-700 border border-orange-500 rounded-lg text-white placeholder-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-orange-100 text-xs font-medium mb-2">Reason</label>
+                          <input
+                            type="text"
+                            placeholder="e.g., Service fee, Penalty, etc."
+                            id={`custom-charge-reason-${selectedUser.id}`}
+                            className="w-full p-3 bg-orange-700 border border-orange-500 rounded-lg text-white placeholder-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                          />
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            const amountInput = document.getElementById(`custom-charge-${selectedUser.id}`) as HTMLInputElement;
+                            const reasonInput = document.getElementById(`custom-charge-reason-${selectedUser.id}`) as HTMLInputElement;
+                            const amount = parseFloat(amountInput?.value || '0');
+                            const reason = reasonInput?.value || 'Admin charge';
+                            
+                            if (amount <= 0) {
+                              alert('Please enter a valid amount greater than £0');
+                              return;
+                            }
+                            
+                            if (window.confirm(`CHARGE £${amount.toFixed(2)} TO USER?\n\nUser: ${selectedUser.name}\nReason: ${reason}\n\nThis action is irreversible.`)) {
+                              try {
+                                const result = await api.adminChargeUser(selectedUser.id, amount, reason);
+                                if (result.success) {
+                                  alert(`Successfully charged £${amount.toFixed(2)} to ${selectedUser.name}`);
+                                  amountInput.value = '';
+                                  reasonInput.value = '';
+                                  loadUsers();
+                                } else {
+                                  alert(`Charge failed: ${result.error || 'Unknown error'}`);
+                                }
+                              } catch (error: any) {
+                                alert(`Charge failed: ${error.message || 'User may not have an active payment mandate.'}`);
+                              }
+                            }
+                          }}
+                          disabled={!selectedUser.mandateActive}
+                          className="w-full py-4 bg-white text-orange-600 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                        >
+                          <CreditCard size={18} /> Charge Custom Amount
+                        </button>
+                        {!selectedUser.mandateActive && (
+                          <p className="text-orange-200 text-xs text-center">User must have an active mandate to charge</p>
+                        )}
+                      </div>
+                   </div>
+
                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                       <h3 className="font-bold text-gray-900 mb-4">Account Actions</h3>
                       <button className="w-full py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-bold text-xs transition-colors mb-2">Suspend User</button>
