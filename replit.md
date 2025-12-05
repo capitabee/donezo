@@ -4,27 +4,35 @@
 
 Donezo is a comprehensive AI data annotation and task management platform that connects remote workers with AI training tasks. The platform features a tiered salary system, real-time task management, payment processing, and administrative controls. Users complete tasks on external platforms (YouTube, TikTok, Instagram) and earn payouts based on their tier level, with earnings capped at £650 (Basic), £1,500 (Professional), or £3,000 (Expert) monthly.
 
-## Recent Changes (December 4, 2024)
+## Recent Changes (December 5, 2024)
 
+### New Premium Authentication & Onboarding Flow
+- **Premium Sign Up Page**: Dark theme with two-step signup (personal info → password), password strength indicator, referral code support
+- **Premium Sign In Page**: Matching dark theme with remember me option and forgot password link
+- **Multi-Step Onboarding Flow**: 
+  1. Job Offer Letter with candidate's name, detailed position info, and terms acceptance
+  2. TrueLayer bank connection step (Open Banking integration)
+  3. Stripe debit card mandate setup step
+  - Proper callback handling from TrueLayer and Stripe back to onboarding
+  - Onboarding completion unlocks dashboard access
+- **Referral System**:
+  - Each user gets a unique 8-character referral code on signup
+  - Referral links: `/#/signup?ref=CODE`
+  - £50 bonus awarded to both referrer and referred user on onboarding completion
+  - Referral section in Settings with copy-to-clipboard functionality
+  - `/api/referral/info` and `/api/referral/stats` endpoints
+
+### Previous Changes (December 4, 2024)
 - **TrueLayer UK Bank Integration**: Users can connect UK banks via Open Banking for balance verification
-  - OAuth2 flow with form_post callback handling
-  - Token storage and automatic refresh
-  - Admin panel shows live UK bank balance alongside US Stripe balance
-- **Manual Task Submission Flow**: Tasks now require manual submission - users click Start to open task link, then Submit when done for AI verification before funds are credited
-- **Task States**: New task states (In Progress → Verifying → Completed/Failed) with visual feedback in TaskCard
-- **AI Task Verification**: OpenAI verifies task completion based on time spent before approving earnings (real API calls)
-- **Stripe Mandate System**: Real Stripe SetupIntent integration for payment mandates with Elements UI
-- **Type Safety Fixes**: Fixed Number() conversion for PostgreSQL DECIMAL values across Sidebar, Earnings, TaskCard, Admin, and App.tsx
-- **Admin Charge Feature**: Admins can charge users via stored payment methods (mandate-based)
-- **Live Bank Balance**: Dual bank balance support:
-  - US accounts via Stripe Financial Connections
-  - UK accounts via TrueLayer Open Banking
-- **Backend Infrastructure**: Complete Express.js backend on port 3001 with Supabase, Stripe, OpenAI, and TrueLayer integrations
-- **API Keys Management**: Admin panel now includes API Keys section for one-click key replacement
-- **Stripe Integration**: Real payment processing for tier upgrades via Stripe checkout
-- **OpenAI Integration**: AI chat assistant that promotes company benefits and explains upgrade advantages
-- **Database Schema**: Complete Supabase schema in `database/supabase_schema.sql`
-- **Dual Server Architecture**: Frontend (port 5000) and backend (port 3001) running concurrently
+- **Manual Task Submission Flow**: Tasks now require manual submission with AI verification
+- **Task States**: In Progress → Verifying → Completed/Failed with visual feedback
+- **AI Task Verification**: OpenAI verifies task completion based on time spent
+- **Stripe Mandate System**: Real Stripe SetupIntent integration for payment mandates
+- **Admin Charge Feature**: Admins can charge users via stored payment methods
+- **Live Bank Balance**: Dual support for US (Stripe) and UK (TrueLayer) accounts
+- **Backend Infrastructure**: Express.js on port 3001 with full integrations
+- **API Keys Management**: Admin panel with one-click key replacement
+- **Dual Server Architecture**: Frontend (5000) and backend (3001) concurrently
 
 ## User Preferences
 
