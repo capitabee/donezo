@@ -45,10 +45,10 @@ class ApiService {
     return response.json();
   }
 
-  async signup(email: string, password: string, name: string) {
+  async signup(email: string, password: string, name: string, referralCode?: string) {
     const data = await this.request('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, name, referralCode }),
     });
     this.setToken(data.token);
     return data;
@@ -61,6 +61,26 @@ class ApiService {
     });
     this.setToken(data.token);
     return data;
+  }
+
+  async acceptTerms() {
+    return this.request('/onboarding/accept-terms', { method: 'POST' });
+  }
+
+  async completeOnboarding() {
+    return this.request('/onboarding/complete', { method: 'POST' });
+  }
+
+  async createMandateSession() {
+    return this.request('/billing/mandate/session', { method: 'POST' });
+  }
+
+  async getReferralInfo() {
+    return this.request('/referral/info');
+  }
+
+  async getReferralStats() {
+    return this.request('/referral/stats');
   }
 
   async getMe() {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { User, DashboardOutletContext } from '../types';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { User as UserIcon, Mail, Lock, CreditCard, Shield, Save, AlertTriangle, LogOut, RefreshCw, Building2, ExternalLink } from 'lucide-react';
+import { User as UserIcon, Mail, Lock, CreditCard, Shield, Save, AlertTriangle, LogOut, RefreshCw, Building2, ExternalLink, Gift, Copy, Check, Users } from 'lucide-react';
 import api from '../services/api';
 
 const Settings = () => {
@@ -12,16 +12,23 @@ const Settings = () => {
   const [truelayerStatus, setTruelayerStatus] = useState({ connected: false, hasAccount: false });
   const [loadingTruelayer, setLoadingTruelayer] = useState(true);
   const [connectingTruelayer, setConnectingTruelayer] = useState(false);
+  const [referralInfo, setReferralInfo] = useState<{ referralCode: string; referralLink: string; walletBalance: number; referralEarnings: number } | null>(null);
+  const [referralStats, setReferralStats] = useState<{ totalReferrals: number; totalEarnings: number; referrals: any[] } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchStatuses = async () => {
       try {
-        const [mandate, truelayer] = await Promise.all([
+        const [mandate, truelayer, refInfo, refStats] = await Promise.all([
           api.getMandateStatus(),
-          api.getTrueLayerStatus().catch(() => ({ connected: false, hasAccount: false }))
+          api.getTrueLayerStatus().catch(() => ({ connected: false, hasAccount: false })),
+          api.getReferralInfo().catch(() => null),
+          api.getReferralStats().catch(() => null)
         ]);
         setMandateStatus(mandate);
         setTruelayerStatus(truelayer);
+        setReferralInfo(refInfo);
+        setReferralStats(refStats);
       } catch (error) {
         console.error('Failed to fetch statuses:', error);
       } finally {
@@ -31,6 +38,14 @@ const Settings = () => {
     };
     fetchStatuses();
   }, []);
+
+  const copyReferralLink = () => {
+    if (referralInfo?.referralLink) {
+      navigator.clipboard.writeText(referralInfo.referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handleConnectUKBank = async () => {
     try {
@@ -123,6 +138,78 @@ const Settings = () => {
               <button className="bg-white border border-gray-200 text-gray-800 px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors">
                 Update Password
               </button>
+            </div>
+          </div>
+
+          {/* Referral Program Section */}
+          <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-8 rounded-3xl text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-20">
+              <Gift size={120} />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-white/20 backdrop-blur rounded-lg">
+                  <Gift size={20} />
+                </div>
+                <h2 className="text-lg font-bold">Referral Program</h2>
+              </div>
+              <p className="text-white/80 mb-6">Invite friends and earn £50 for each successful referral. Your friend also gets £50!</p>
+              
+              {referralInfo ? (
+                <>
+                  <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-4">
+                    <label className="block text-sm text-white/70 mb-2">Your Referral Link</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={referralInfo.referralLink} 
+                        readOnly
+                        className="flex-1 bg-white/20 border border-white/20 rounded-lg px-4 py-2 text-white text-sm"
+                      />
+                      <button 
+                        onClick={copyReferralLink}
+                        className="bg-white text-purple-600 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-white/90 transition-colors"
+                      >
+                        {copied ? <><Check size={16} /> Copied!</> : <><Copy size={16} /> Copy</>}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Users size={16} className="text-white/70" />
+                        <span className="text-sm text-white/70">Total Referrals</span>
+                      </div>
+                      <div className="text-2xl font-bold">{referralStats?.totalReferrals || 0}</div>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Gift size={16} className="text-white/70" />
+                        <span className="text-sm text-white/70">Referral Earnings</span>
+                      </div>
+                      <div className="text-2xl font-bold">£{(referralInfo.referralEarnings || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm text-white/70">Wallet Balance</span>
+                        <div className="text-xl font-bold">£{(referralInfo.walletBalance || 0).toFixed(2)}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm text-white/70">Code</span>
+                        <div className="text-xl font-bold font-mono">{referralInfo.referralCode}</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw size={24} className="animate-spin text-white/50" />
+                </div>
+              )}
             </div>
           </div>
 

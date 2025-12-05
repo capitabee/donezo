@@ -59,9 +59,18 @@ const authenticateToken = (req: any, res: any, next: any) => {
   });
 };
 
+function generateReferralCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 app.post('/api/auth/signup', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, referralCode } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Email, password, and name are required' });
@@ -79,10 +88,19 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(500).json({ error: 'Failed to create user' });
     }
 
+    const userReferralCode = generateReferralCode();
+    const updateData: any = { referral_code: userReferralCode };
+    
+    if (referralCode) {
+      updateData.referred_by = referralCode;
+    }
+
     const stripeCustomer = await stripeService.createCustomer(email, name);
     if (stripeCustomer) {
-      await userService.updateUser(user.id, { stripe_customer_id: stripeCustomer.id } as any);
+      updateData.stripe_customer_id = stripeCustomer.id;
     }
+
+    await userService.updateUser(user.id, updateData);
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
@@ -96,7 +114,9 @@ app.post('/api/auth/signup', async (req, res) => {
         earnings: user.earnings,
         qualityScore: user.quality_score,
         completedTasks: user.completed_tasks,
-        mandateActive: user.mandate_active
+        mandateActive: user.mandate_active,
+        onboarding_completed: false,
+        referral_code: userReferralCode
       }
     });
   } catch (error) {
@@ -135,12 +155,112 @@ app.post('/api/auth/signin', async (req, res) => {
         earnings: user.earnings,
         qualityScore: user.quality_score,
         completedTasks: user.completed_tasks,
-        mandateActive: user.mandate_active
+        mandateActive: user.mandate_active,
+        onboarding_completed: (user as any).onboarding_completed || false,
+        referral_code: (user as any).referral_code
       }
     });
   } catch (error) {
     console.error('Signin error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/onboarding/accept-terms', authenticateToken, async (req: any, res) => {
+  try {
+    await userService.updateUser(req.user.userId, {
+      terms_accepted: true,
+      terms_accepted_at: new Date().toISOString()
+    } as any);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Accept terms error:', error);
+    res.status(500).json({ error: 'Failed to accept terms' });
+  }
+});
+
+app.post('/api/onboarding/complete', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await userService.updateUser(req.user.userId, {
+      onboarding_completed: true
+    } as any);
+
+    const referredBy = (user as any).referred_by;
+    if (referredBy) {
+      const referrer = await userService.getUserByReferralCode(referredBy);
+      if (referrer) {
+        await userService.updateUser(referrer.id, {
+          wallet_balance: Number((referrer as any).wallet_balance || 0) + 50,
+          referral_earnings: Number((referrer as any).referral_earnings || 0) + 50
+        } as any);
+        
+        await userService.updateUser(req.user.userId, {
+          wallet_balance: Number((user as any).wallet_balance || 0) + 50
+        } as any);
+        
+        console.log(`Referral bonus applied: ${referrer.email} and ${user.email} each received £50`);
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Complete onboarding error:', error);
+    res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
+});
+
+app.get('/api/referral/info', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const baseUrl = process.env.REPLIT_DOMAINS 
+      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+      : 'http://localhost:5000';
+
+    res.json({
+      referralCode: (user as any).referral_code,
+      referralLink: `${baseUrl}/#/signup?ref=${(user as any).referral_code}`,
+      walletBalance: Number((user as any).wallet_balance || 0),
+      referralEarnings: Number((user as any).referral_earnings || 0)
+    });
+  } catch (error) {
+    console.error('Get referral info error:', error);
+    res.status(500).json({ error: 'Failed to get referral info' });
+  }
+});
+
+app.get('/api/referral/stats', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const referralCode = (user as any).referral_code;
+    const referredUsers = await userService.getUsersReferredBy(referralCode);
+
+    res.json({
+      totalReferrals: referredUsers.length,
+      totalEarnings: Number((user as any).referral_earnings || 0),
+      walletBalance: Number((user as any).wallet_balance || 0),
+      referrals: referredUsers.map((u: any) => ({
+        name: u.name,
+        joinedAt: u.created_at,
+        completed: u.onboarding_completed
+      }))
+    });
+  } catch (error) {
+    console.error('Get referral stats error:', error);
+    res.status(500).json({ error: 'Failed to get referral stats' });
   }
 });
 
@@ -335,6 +455,38 @@ app.post('/api/upgrade', authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error('Upgrade error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/billing/mandate/session', authenticateToken, async (req: any, res) => {
+  try {
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.stripe_customer_id) {
+      const customer = await stripeService.createCustomer(user.email, user.name);
+      if (customer) {
+        await userService.updateUser(user.id, { stripe_customer_id: customer.id } as any);
+        user.stripe_customer_id = customer.id;
+      }
+    }
+
+    const setupIntent = await stripeService.createSetupIntent(user.stripe_customer_id!);
+
+    if (!setupIntent) {
+      return res.status(500).json({ error: 'Failed to create setup intent' });
+    }
+
+    res.json({
+      clientSecret: setupIntent.client_secret,
+      customerId: user.stripe_customer_id
+    });
+  } catch (error) {
+    console.error('Mandate session error:', error);
+    res.status(500).json({ error: 'Failed to create mandate session' });
   }
 });
 

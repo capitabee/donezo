@@ -178,6 +178,19 @@ export const pgUserService = {
       console.error('Error upgrading tier:', error);
       return false;
     }
+  },
+
+  async getUserByReferralCode(referralCode: string): Promise<DBUser | null> {
+    const result = await pool.query('SELECT * FROM users WHERE referral_code = $1', [referralCode]);
+    return result.rows[0] || null;
+  },
+
+  async getUsersReferredBy(referralCode: string): Promise<DBUser[]> {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE referred_by = $1 ORDER BY created_at DESC',
+      [referralCode]
+    );
+    return result.rows;
   }
 };
 

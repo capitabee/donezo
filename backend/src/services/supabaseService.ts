@@ -245,6 +245,26 @@ export const userService = {
     });
 
     return true;
+  },
+
+  async getUserByReferralCode(referralCode: string): Promise<DBUser | null> {
+    if (!isConfigured) {
+      return mockUsers.find((u: any) => u.referral_code === referralCode) || null;
+    }
+    
+    const { data, error } = await supabase!.from('users').select('*').eq('referral_code', referralCode).single();
+    if (error || !data) return null;
+    return data;
+  },
+
+  async getUsersReferredBy(referralCode: string): Promise<DBUser[]> {
+    if (!isConfigured) {
+      return mockUsers.filter((u: any) => u.referred_by === referralCode);
+    }
+    
+    const { data, error } = await supabase!.from('users').select('*').eq('referred_by', referralCode);
+    if (error || !data) return [];
+    return data;
   }
 };
 

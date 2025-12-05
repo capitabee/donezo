@@ -16,7 +16,13 @@ const TrueLayerCallback = () => {
       if (success === 'true') {
         setStatus('success');
         setMessage('Your UK bank has been connected successfully!');
-        setTimeout(() => navigate('/dashboard/settings'), 2000);
+        // Check if user is in onboarding flow
+        const isOnboarding = localStorage.getItem('onboardingName');
+        if (isOnboarding) {
+          setTimeout(() => navigate('/onboarding?bank_connected=true'), 2000);
+        } else {
+          setTimeout(() => navigate('/dashboard/settings'), 2000);
+        }
         return;
       }
 
@@ -72,10 +78,13 @@ const TrueLayerCallback = () => {
             <h2 className="text-xl font-bold text-gray-800 mb-2">Connection Failed</h2>
             <p className="text-gray-500 mb-6">{message}</p>
             <button
-              onClick={() => navigate('/dashboard/settings')}
+              onClick={() => {
+                const isOnboarding = localStorage.getItem('onboardingName');
+                navigate(isOnboarding ? '/onboarding' : '/dashboard/settings');
+              }}
               className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold"
             >
-              Back to Settings
+              {localStorage.getItem('onboardingName') ? 'Back to Onboarding' : 'Back to Settings'}
             </button>
           </>
         )}

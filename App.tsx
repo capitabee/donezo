@@ -1,5 +1,5 @@
 import React, { useState, ReactElement, useEffect, useCallback, useRef } from 'react';
-import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Sidebar from './components/Sidebar';
@@ -15,6 +15,9 @@ import Support from './pages/Support';
 import ChatOverlay from './components/ChatOverlay';
 import TrueLayerCallback from './pages/TrueLayerCallback';
 import NotificationPopup from './components/NotificationPopup';
+import SignUp from './pages/SignUp';
+import SignIn from './pages/SignIn';
+import Onboarding from './pages/Onboarding';
 import { User, UserTier, AdminMessage, AdminMessageType, DashboardOutletContext, Task, TaskCategory, TaskStatus } from './types';
 import api from './services/api';
 
@@ -702,7 +705,13 @@ const MandateForm = () => {
       if (setupIntent?.payment_method) {
         await api.confirmMandate(setupIntent.payment_method as string);
         setSuccess(true);
-        setTimeout(() => navigate('/dashboard'), 2000);
+        // Check if user is in onboarding flow
+        const isOnboarding = localStorage.getItem('onboardingName');
+        if (isOnboarding) {
+          setTimeout(() => navigate('/onboarding?mandate_connected=true'), 2000);
+        } else {
+          setTimeout(() => navigate('/dashboard'), 2000);
+        }
       }
     } catch (err) {
       setError('Failed to complete mandate setup');
@@ -823,10 +832,13 @@ const Mandate = () => {
         )}
 
         <button 
-          onClick={() => navigate('/dashboard')} 
+          onClick={() => {
+            const isOnboarding = localStorage.getItem('onboardingName');
+            navigate(isOnboarding ? '/onboarding' : '/dashboard');
+          }} 
           className="w-full mt-4 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-colors"
         >
-          Cancel
+          {localStorage.getItem('onboardingName') ? 'Back to Onboarding' : 'Cancel'}
         </button>
       </div>
     </div>
@@ -857,9 +869,11 @@ const App = () => {
     <HashRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/signin" element={<Signin />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/mandate" element={<Mandate />} />
+        <Route path="/mandate-setup" element={<Mandate />} />
         <Route path="/truelayer-callback" element={<TrueLayerCallback />} />
         <Route path="/admin" element={<Admin onSendAdminMessage={addAdminMessageFromAdmin} />} />
 
