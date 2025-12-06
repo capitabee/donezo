@@ -10,8 +10,16 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 - **Modern OAuth Flow**: Updated from mock provider to real UK Open Banking (`uk-ob-all`)
 - **Bank Selection Screen**: Users now see a list of real UK banks (Monzo, Barclays, Lloyds, etc.)
 - **Bank App/Website Auth**: Users authenticate directly with their bank, not via credentials
-- **Query Response Mode**: Changed from `form_post` to `query` for proper redirect handling
-- **GET Callback Handler**: Updated backend to handle OAuth codes via GET request
+- **Production Mode**: Switched to production TrueLayer URLs (auth.truelayer.com, api.truelayer.com)
+- **Token Storage**: Callback stores access_token, refresh_token in database with expiry tracking
+- **Initial Balance Fetch**: Balance is fetched and stored on successful bank connection
+
+### TrueLayer Balance Sync System
+- **Live Balance Storage**: Bank balances stored in `bank_balance_cents` and `bank_balance_updated_at` columns
+- **Admin Balance Display**: User list shows live bank balance with UK/US bank indicators
+- **Sync All Balances**: Admin button to refresh all connected users' balances at once
+- **Individual Balance Fetch**: `/api/admin/users/:userId/truelayer-balance` endpoint with token refresh
+- **Token Auto-Refresh**: Automatically refreshes expired tokens using refresh_token
 
 ### Chat Memory System & AI Improvements
 - **Persistent Chat Memory**: All conversations with Sarah (Team Leader AI) are now stored in `chat_messages` table

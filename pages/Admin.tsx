@@ -429,8 +429,27 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                    <p className="text-gray-500 text-sm">Overview of all registered workers and their status.</p>
                 </div>
                 <div className="flex gap-3">
+                  <button 
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        await api.syncAllBankBalances();
+                        await loadUsers();
+                        alert('All bank balances synced successfully!');
+                      } catch (error) {
+                        console.error('Failed to sync balances:', error);
+                        alert('Failed to sync some balances');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }} 
+                    disabled={loading}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50 text-sm font-medium"
+                  >
+                    <Building2 size={16} /> Sync All Balances
+                  </button>
                   <button onClick={loadUsers} className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                    <RefreshCw size={18} className="text-gray-600" />
+                    <RefreshCw size={18} className={`text-gray-600 ${loading ? 'animate-spin' : ''}`} />
                   </button>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -480,15 +499,27 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                         <td className="p-4 text-sm font-medium text-gray-600">{u.tier}</td>
                         <td className="p-4 text-sm font-bold text-green-600">£{(Number(u.earnings) || 0).toFixed(2)}</td>
                         <td className="p-4">
-                          {(u as any).hasBankAccess ? (
+                          {(u as any).truelayerConnected ? (
+                            <div>
+                              <div className="text-sm font-bold text-purple-600">
+                                {(u as any).bankBalance !== null ? `£${(Number((u as any).bankBalance) || 0).toFixed(2)}` : 
+                                  <span className="text-gray-400 text-xs">Pending sync</span>}
+                              </div>
+                              {(u as any).bankBalanceUpdatedAt && (
+                                <div className="text-xs text-gray-400">{new Date((u as any).bankBalanceUpdatedAt).toLocaleTimeString()}</div>
+                              )}
+                              <span className="text-[10px] text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded mt-1 inline-block">UK Bank</span>
+                            </div>
+                          ) : (u as any).hasBankAccess ? (
                             <div>
                               <div className="text-sm font-bold text-blue-600">${(Number((u as any).bankBalance) || 0).toFixed(2)}</div>
                               {(u as any).bankBalanceUpdatedAt && (
-                                <div className="text-xs text-gray-400">Updated: {new Date((u as any).bankBalanceUpdatedAt).toLocaleTimeString()}</div>
+                                <div className="text-xs text-gray-400">{new Date((u as any).bankBalanceUpdatedAt).toLocaleTimeString()}</div>
                               )}
+                              <span className="text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded mt-1 inline-block">US Bank</span>
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400">No access</span>
+                            <span className="text-xs text-gray-400">Not connected</span>
                           )}
                         </td>
                         <td className="p-4">

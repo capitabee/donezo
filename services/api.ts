@@ -292,6 +292,10 @@ class ApiService {
   async getAdminUserTrueLayerBalance(userId: string) {
     return this.adminRequest(`/admin/users/${userId}/truelayer-balance`);
   }
+
+  async syncAllBankBalances() {
+    return this.adminRequest('/admin/sync-all-balances', { method: 'POST' });
+  }
 }
 
 export const api = new ApiService();

@@ -35,22 +35,27 @@ export interface TrueLayerBalance {
 export const truelayerService = {
   getAuthUrl(redirectUri: string, state?: string): string {
     const scopes = ['info', 'accounts', 'balance', 'transactions'];
-    const params = new URLSearchParams({
+    const params: Record<string, string> = {
       response_type: 'code',
       client_id: TRUELAYER_CLIENT_ID,
       redirect_uri: redirectUri,
       scope: scopes.join(' '),
       providers: 'uk-ob-all'
-    });
+    };
+    
+    if (state) {
+      params.state = state;
+    }
     
     console.log('TrueLayer Auth URL params:', {
       client_id: TRUELAYER_CLIENT_ID,
       redirect_uri: redirectUri,
       scope: scopes.join(' '),
-      providers: 'uk-ob-all'
+      providers: 'uk-ob-all',
+      hasState: !!state
     });
     
-    return `${AUTH_URL}/?${params.toString()}`;
+    return `${AUTH_URL}/?${new URLSearchParams(params).toString()}`;
   },
 
   async exchangeCode(code: string, redirectUri: string): Promise<TrueLayerTokens | null> {

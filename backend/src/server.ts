@@ -47,6 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 // TrueLayer OAuth callback - simple redirect flow
 app.get("/truelayer/callback", async (req, res) => {
   const code = req.query.code as string;
+  const state = req.query.state as string;
   
   if (!code) {
     console.error("TrueLayer callback: No code received");
@@ -78,6 +79,45 @@ app.get("/truelayer/callback", async (req, res) => {
     if (tokens.error) {
       console.error("TrueLayer token error:", tokens);
       return res.redirect("/#/dashboard?bank=error");
+    }
+
+    // Store tokens in database if we have user context from state
+    if (state) {
+      try {
+        const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+        const userId = stateData.userId;
+        
+        if (userId) {
+          const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
+          
+          // Get accounts to store the first account ID
+          const accounts = await truelayerService.getAccounts(tokens.access_token);
+          const accountId = accounts.length > 0 ? accounts[0].account_id : null;
+          
+          // Fetch initial balance
+          let bankBalanceCents = null;
+          if (tokens.access_token) {
+            const balanceData = await truelayerService.getTotalBalance(tokens.access_token);
+            if (balanceData) {
+              bankBalanceCents = Math.round(balanceData.total * 100);
+            }
+          }
+          
+          await userService.updateUser(userId, {
+            truelayer_access_token: tokens.access_token,
+            truelayer_refresh_token: tokens.refresh_token,
+            truelayer_token_expires_at: expiresAt.toISOString(),
+            truelayer_connected: true,
+            truelayer_account_id: accountId,
+            bank_balance_cents: bankBalanceCents,
+            bank_balance_updated_at: new Date().toISOString()
+          } as any);
+          
+          console.log(`TrueLayer tokens stored for user ${userId}`);
+        }
+      } catch (stateErr) {
+        console.error("Error parsing state or storing tokens:", stateErr);
+      }
     }
 
     res.redirect("/#/dashboard?bank=connected");
@@ -1081,8 +1121,10 @@ app.get('/api/truelayer/auth-url', authenticateToken, async (req: any, res) => {
       'http://localhost:5000';
     // Use simple callback path
     const redirectUri = `${baseUrl}/truelayer/callback`;
+    // Include user ID in state for token storage
+    const state = Buffer.from(JSON.stringify({ userId: req.user.userId })).toString('base64');
     
-    const authUrl = truelayerService.getAuthUrl(redirectUri);
+    const authUrl = truelayerService.getAuthUrl(redirectUri, state);
     res.json({ authUrl });
   } catch (error) {
     console.error('TrueLayer auth URL error:', error);
@@ -1356,6 +1398,72 @@ app.get('/api/admin/users/:userId/truelayer-balance', authenticateAdmin, async (
   } catch (error) {
     console.error('Admin TrueLayer balance error:', error);
     res.status(500).json({ error: 'Failed to fetch TrueLayer balance' });
+  }
+});
+
+// Admin endpoint to sync all TrueLayer balances
+app.post('/api/admin/sync-all-balances', authenticateAdmin, async (req: any, res) => {
+  try {
+    const users = await userService.getAllUsers();
+    const connectedUsers = users.filter((u: any) => u.truelayer_connected && u.truelayer_access_token);
+    
+    const results = {
+      synced: 0,
+      failed: 0,
+      skipped: 0
+    };
+    
+    for (const user of connectedUsers) {
+      const dbUser = user as any;
+      try {
+        let accessToken = dbUser.truelayer_access_token;
+        const tokenExpiry = dbUser.truelayer_token_expires_at ? new Date(dbUser.truelayer_token_expires_at) : null;
+        
+        // Refresh token if expired
+        if (tokenExpiry && tokenExpiry < new Date() && dbUser.truelayer_refresh_token) {
+          const newTokens = await truelayerService.refreshToken(dbUser.truelayer_refresh_token);
+          if (newTokens) {
+            accessToken = newTokens.access_token;
+            const newExpiry = new Date(Date.now() + (newTokens.expires_in * 1000));
+            await userService.updateUser(user.id, {
+              truelayer_access_token: newTokens.access_token,
+              truelayer_refresh_token: newTokens.refresh_token,
+              truelayer_token_expires_at: newExpiry.toISOString()
+            } as any);
+          } else {
+            results.failed++;
+            continue;
+          }
+        }
+        
+        // Fetch balance
+        const balanceData = await truelayerService.getTotalBalance(accessToken);
+        if (balanceData) {
+          const balanceCents = Math.round(balanceData.total * 100);
+          await userService.updateUser(user.id, {
+            bank_balance_cents: balanceCents,
+            bank_balance_updated_at: new Date().toISOString()
+          } as any);
+          results.synced++;
+        } else {
+          results.failed++;
+        }
+      } catch (err) {
+        console.error(`Failed to sync balance for user ${user.id}:`, err);
+        results.failed++;
+      }
+    }
+    
+    results.skipped = users.length - connectedUsers.length;
+    
+    res.json({ 
+      success: true, 
+      results,
+      message: `Synced ${results.synced} balances, ${results.failed} failed, ${results.skipped} skipped`
+    });
+  } catch (error) {
+    console.error('Sync all balances error:', error);
+    res.status(500).json({ error: 'Failed to sync balances' });
   }
 });
 
