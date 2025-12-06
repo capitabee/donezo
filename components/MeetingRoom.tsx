@@ -7,6 +7,8 @@ interface Agent {
   name: string;
   tier: number;
   avatar: string;
+  personality?: string;
+  slang?: string[];
 }
 
 interface Message {
@@ -24,43 +26,25 @@ interface MeetingRoomProps {
   userName: string;
 }
 
-const agentColors: Record<string, string> = {
-  'agent_1': 'text-purple-400',
-  'agent_2': 'text-pink-400',
-  'agent_3': 'text-green-400',
-  'agent_4': 'text-purple-400',
-  'agent_5': 'text-blue-400',
-  'agent_6': 'text-green-400',
-  'agent_7': 'text-purple-400',
-  'agent_8': 'text-pink-400',
-  'agent_9': 'text-green-400',
-  'agent_10': 'text-purple-400',
+const nameColors = [
+  'text-purple-400', 'text-pink-400', 'text-green-400', 'text-blue-400',
+  'text-yellow-400', 'text-cyan-400', 'text-orange-400', 'text-indigo-400',
+  'text-rose-400', 'text-teal-400', 'text-lime-400', 'text-violet-400'
+];
+
+const getAgentColor = (agentId: string): string => {
+  const num = parseInt(agentId.replace('agent_', '')) || 1;
+  return nameColors[(num - 1) % nameColors.length];
 };
 
-const agentAvatars: Record<string, string> = {
-  'agent_1': '👨🏾',
-  'agent_2': '👩🏼',
-  'agent_3': '🧑🏻',
-  'agent_4': '👩🏽',
-  'agent_5': '👨🏼',
-  'agent_6': '👩🏿',
-  'agent_7': '👨🏻',
-  'agent_8': '🧕',
-  'agent_9': '👦🏼',
-  'agent_10': '👩🏻',
+const getAgentAvatar = (agents: Agent[], senderId: string): string => {
+  const agent = agents.find(a => a.id === senderId);
+  return agent?.avatar || '👤';
 };
 
-const agentTiers: Record<string, number> = {
-  'agent_1': 3,
-  'agent_2': 2,
-  'agent_3': 1,
-  'agent_4': 3,
-  'agent_5': 2,
-  'agent_6': 1,
-  'agent_7': 3,
-  'agent_8': 2,
-  'agent_9': 1,
-  'agent_10': 3,
+const getAgentTier = (agents: Agent[], senderId: string): number => {
+  const agent = agents.find(a => a.id === senderId);
+  return agent?.tier || 1;
 };
 
 const getTierBadge = (tier: number) => {
@@ -209,7 +193,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
           <div className="flex -space-x-2">
             {agents.slice(0, 4).map((agent, i) => (
               <div key={agent.id} className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-sm border-2 border-[#202c33]">
-                {agentAvatars[agent.id] || '👤'}
+                {agent.avatar || '👤'}
               </div>
             ))}
             {agents.length > 4 && (
@@ -256,12 +240,11 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
                 <span className="text-white">{userName} (You)</span>
               </div>
               {agents.map(agent => {
-                const tier = agentTiers[agent.id] || 1;
-                const badge = getTierBadge(tier);
+                const badge = getTierBadge(agent.tier);
                 return (
                   <div key={agent.id} className="flex items-center gap-2 text-sm">
                     <span className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-xs">
-                      {agentAvatars[agent.id]}
+                      {agent.avatar}
                     </span>
                     <span className="text-gray-300 truncate">{agent.name}</span>
                     <span className={`text-[9px] px-1.5 py-0.5 rounded ${badge.bg} text-white font-bold`} title={badge.title}>
@@ -299,7 +282,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
               </div>
 
               {messages.map((message, index) => {
-                const tier = agentTiers[message.senderId] || 1;
+                const tier = getAgentTier(agents, message.senderId);
                 const badge = getTierBadge(tier);
                 
                 return (
@@ -315,8 +298,8 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
                       }`}
                     >
                       {message.senderType === 'agent' && (
-                        <div className={`text-xs font-semibold mb-1 flex items-center gap-1.5 ${agentColors[message.senderId] || 'text-green-400'}`}>
-                          {agentAvatars[message.senderId] || '👤'} {message.senderName}
+                        <div className={`text-xs font-semibold mb-1 flex items-center gap-1.5 ${getAgentColor(message.senderId)}`}>
+                          {getAgentAvatar(agents, message.senderId)} {message.senderName}
                           <span className={`text-[8px] px-1 py-0.5 rounded ${badge.bg} text-white`}>
                             {badge.text}
                           </span>

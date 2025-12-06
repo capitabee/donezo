@@ -647,12 +647,12 @@ app.get('/api/earnings/activity', authenticateToken, async (req: any, res) => {
 // Meeting Room API Routes
 app.post('/api/meeting/join', authenticateToken, async (req: any, res) => {
   try {
-    const { roomId, isNew } = await meetingService.getOrCreateMeetingRoom(req.user.userId);
+    const { roomId, isNew, agents } = await meetingService.getOrCreateMeetingRoom(req.user.userId);
     
     let messages = await meetingService.getMeetingMessages(roomId);
     
-    // If new room, initialize with welcome messages
-    if (isNew && messages.length === 0) {
+    // If new room or no messages, initialize with welcome messages
+    if ((isNew || messages.length === 0) && agents.length > 0) {
       const welcomeMessages = await meetingService.initializeRoom(roomId);
       messages = welcomeMessages;
     }
@@ -660,7 +660,7 @@ app.post('/api/meeting/join', authenticateToken, async (req: any, res) => {
     res.json({
       roomId,
       isNew,
-      agents: meetingService.agents,
+      agents: agents,
       messages: messages.map(m => ({
         id: m.id,
         senderType: m.sender_type,
