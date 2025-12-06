@@ -136,162 +136,356 @@ function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generateFallbackMessage(agent: Agent, isInteractive: boolean = false): string {
+// Smart intent detection for user messages
+function detectIntent(message: string): string {
+  const lower = message.toLowerCase().trim();
+  
+  // Greetings
+  if (/^(hi|hey|hello|yo|sup|whats up|what's up|hiya|howdy|morning|afternoon|evening)/i.test(lower)) {
+    return 'greeting';
+  }
+  
+  // Questions about the user
+  if (lower.includes('how are you') || lower.includes('hows everyone') || lower.includes('how u') || lower.includes('how is everyone')) {
+    return 'how_are_you';
+  }
+  
+  // Questions about joining/new
+  if (lower.includes('when did') && (lower.includes('join') || lower.includes('start'))) {
+    return 'when_joined';
+  }
+  if (lower.includes('new here') || lower.includes('just joined') || lower.includes('just started')) {
+    return 'new_user';
+  }
+  
+  // Withdrawal/money questions
+  if (lower.includes('withdraw') || lower.includes('payout') || lower.includes('paid') || lower.includes('money') || lower.includes('cash') || lower.includes('earnings')) {
+    return 'withdrawal';
+  }
+  
+  // Task questions
+  if (lower.includes('task') || lower.includes('how many') || lower.includes('done today') || lower.includes('completed')) {
+    return 'tasks';
+  }
+  
+  // Upgrade questions
+  if (lower.includes('upgrade') || lower.includes('tier') || lower.includes('worth it') || lower.includes('should i')) {
+    return 'upgrade';
+  }
+  
+  // Help/how questions
+  if (lower.includes('help') || lower.includes('how do') || lower.includes('how does') || lower.includes('explain')) {
+    return 'help';
+  }
+  
+  // Encouragement/thanks
+  if (lower.includes('thanks') || lower.includes('thank you') || lower.includes('appreciate') || lower.includes('helpful')) {
+    return 'thanks';
+  }
+  
+  // Sharing progress
+  if (lower.includes('i did') || lower.includes('i got') || lower.includes('i made') || lower.includes('just finished') || /\d+ tasks/.test(lower)) {
+    return 'sharing_progress';
+  }
+  
+  // Asking for opinion
+  if (lower.includes('what do you think') || lower.includes('thoughts') || lower.includes('opinion')) {
+    return 'opinion';
+  }
+  
+  // Goodbye
+  if (lower.includes('bye') || lower.includes('gotta go') || lower.includes('leaving') || lower.includes('later') || lower.includes('see ya')) {
+    return 'goodbye';
+  }
+  
+  return 'general';
+}
+
+// Smart context-aware reply generator
+function generateSmartReply(agent: Agent, userMessage: string, userName: string, recentContext: string[]): string {
+  const s = getRandomElement(agent.slang);
+  const intent = detectIntent(userMessage);
+  const randomTasks = Math.floor(Math.random() * 40) + 15;
+  const tier2Amounts = [127, 145, 168, 182, 195, 210, 227];
+  const tier3Amounts = [85, 120, 145, 167, 185, 200, 235];
+  const withdrawAmount = agent.tier === 2 
+    ? getRandomElement(tier2Amounts)
+    : getRandomElement(tier3Amounts);
+  
+  switch (intent) {
+    case 'greeting':
+      return getRandomElement([
+        `yo ${userName}! ${s} 👋`,
+        `${s} hey ${userName} whats good`,
+        `${userName}! good to see u ${s}`,
+        `ayy ${userName} ${s}`,
+        `whats good ${userName} ${s}`,
+        `hey! hows it going ${userName}? ${s}`
+      ]);
+      
+    case 'how_are_you':
+      return getRandomElement([
+        `im good ${s} just grinding away, you?`,
+        `${s} doing well! ${randomTasks} tasks in today`,
+        `cant complain ${s} the money keeps coming`,
+        `good vibes today ${s} how about you?`,
+        `${s} im great, just finished a bunch of tasks`
+      ]);
+      
+    case 'when_joined':
+      const months = Math.floor(Math.random() * 4) + 2;
+      return getRandomElement([
+        `been here like ${months} months now ${s}`,
+        `${s} joined about ${months} months ago, best decision`,
+        `maybe ${months} months? time flies when ur making money ${s}`,
+        `${s} few months now, started tier 1 and upgraded`
+      ]);
+      
+    case 'new_user':
+      return getRandomElement([
+        `welcome! ${s} youll love it here`,
+        `${s} nice! just do ur tasks daily and the money adds up`,
+        `ayy welcome ${s} let us know if u need any tips`,
+        `${s} good to have u! stick with it, it works`,
+        `welcome to the fam ${s} this platform is legit`
+      ]);
+      
+    case 'withdrawal':
+      if (agent.tier === 1) {
+        return getRandomElement([
+          `im tier 1 so i wait for month end ${s} but its worth it`,
+          `${s} still building up my balance, payday coming soon`,
+          `counting down to the 30th ${s} got like £${Math.floor(Math.random() * 200) + 100} saved up`,
+          `${s} cant withdraw yet but my earnings looking good`,
+          `month end for me ${s} saving up for that big payday`
+        ]);
+      } else if (agent.tier === 2) {
+        return getRandomElement([
+          `just got £${withdrawAmount} on friday ${s}`,
+          `${s} weekly payouts are 🔥 got £${withdrawAmount} last week`,
+          `every friday i get paid ${s} last one was £${withdrawAmount}`,
+          `${s} upgraded to tier 2 and now i get weekly, so worth it`,
+          `yeah my last withdrawal was £${withdrawAmount} ${s} comes every friday`
+        ]);
+      } else {
+        return getRandomElement([
+          `just withdrew £${withdrawAmount} like 10 mins ago ${s}`,
+          `${s} i withdraw whenever i want, pulled £${withdrawAmount} today`,
+          `tier 3 means instant withdrawals ${s} got £${withdrawAmount} earlier`,
+          `${s} withdrew £${withdrawAmount} this morning, took 2 minutes`,
+          `anytime withdrawals are elite ${s} just got £${withdrawAmount}`
+        ]);
+      }
+      
+    case 'tasks':
+      return getRandomElement([
+        `done ${randomTasks} today ${s} not bad`,
+        `${s} i did like ${randomTasks} tasks so far, aiming for more`,
+        `about ${randomTasks} ${s} the youtube ones are quickest`,
+        `${randomTasks} and counting ${s} grinding hard today`,
+        `${s} ${randomTasks} done, taking a quick break rn`
+      ]);
+      
+    case 'upgrade':
+      if (agent.tier === 1) {
+        return getRandomElement([
+          `${s} im still tier 1 but thinking about upgrading soon`,
+          `saving up to upgrade ${s} everyone says its worth it`,
+          `${s} cant wait to upgrade, weekly payouts sound nice`
+        ]);
+      } else if (agent.tier === 2) {
+        return getRandomElement([
+          `${s} best decision i made was upgrading to tier 2`,
+          `100% worth it ${s} weekly payouts changed everything`,
+          `${s} upgraded like a month ago, already made the money back`,
+          `tier 2 is solid ${s} weekly cash is nice`
+        ]);
+      } else {
+        return getRandomElement([
+          `tier 3 is the move ${s} instant withdrawals are elite`,
+          `${s} upgraded to tier 3, no regrets at all`,
+          `if u can afford tier 3, do it ${s} the freedom is worth it`,
+          `${s} tier 3 is next level, withdraw whenever u want`
+        ]);
+      }
+      
+    case 'help':
+      return getRandomElement([
+        `${s} just do tasks and the money comes, its pretty simple`,
+        `watch the vids fully and submit ${s} thats basically it`,
+        `${s} start with the easy ones, youtube tasks are quick`,
+        `just be consistent ${s} i do like ${randomTasks} a day`,
+        `${s} any specific questions? happy to help`
+      ]);
+      
+    case 'thanks':
+      return getRandomElement([
+        `no worries ${s} 👍`,
+        `${s} anytime fam`,
+        `all good ${s}`,
+        `${s} we help each other here`,
+        `np ${s} thats what the group is for`
+      ]);
+      
+    case 'sharing_progress':
+      return getRandomElement([
+        `nice one! ${s} keep it up 💪`,
+        `${s} thats solid progress`,
+        `lets go ${s} ur smashing it`,
+        `${s} good stuff, keep grinding`,
+        `ayy congrats ${s} 🔥`
+      ]);
+      
+    case 'opinion':
+      return getRandomElement([
+        `${s} honestly i think this platform is legit`,
+        `imo its worth it ${s} the money comes through`,
+        `${s} i rate it highly, been great for me`,
+        `my opinion? stick with it ${s} it works`
+      ]);
+      
+    case 'goodbye':
+      return getRandomElement([
+        `later ${userName}! ${s}`,
+        `${s} see ya, good grinding today`,
+        `bye! ${s} catch u next time`,
+        `${s} take care ${userName}`,
+        `later ${s} 👋`
+      ]);
+      
+    default:
+      // General conversational responses
+      return getRandomElement([
+        `${s} facts`,
+        `yeah i feel that ${s}`,
+        `${s} same here honestly`,
+        `real talk ${s}`,
+        `${s} 💯`,
+        `${s} i hear that`,
+        `true ${s}`,
+        `for real ${s}`,
+        `${s} yeah`,
+        `makes sense ${s}`
+      ]);
+  }
+}
+
+// Generate auto-messages that are contextual
+function generateAutoMessage(agent: Agent, recentContext: string[]): string {
+  const s = getRandomElement(agent.slang);
   const randomTasks = Math.floor(Math.random() * 45) + 12;
-  const randomEarnings = Math.floor(Math.random() * 180) + 30;
   const tier2Amounts = [115, 127, 145, 168, 182, 195, 210, 227];
   const tier3Amounts = [67, 85, 95, 120, 145, 167, 185, 200];
   const withdrawAmount = agent.tier === 2 
-    ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
-    : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
-
-  const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
+    ? getRandomElement(tier2Amounts)
+    : getRandomElement(tier3Amounts);
   
-  // Interactive messages that ask questions or engage the user
-  const interactiveMessages = [
-    `yo whos online rn? ${s}`,
-    `anyone else grinding today? 🔥`,
-    `${s} how many tasks yall done today?`,
-    `yo new people in here? welcome 👋`,
-    `${s} whos getting paid this week?`,
-    `hows everyone doing today?`,
-    `${s} anyone upgraded recently?`,
-    `whats good everyone`,
-    `${s} yall still grinding or taking a break?`,
-    `whos hit their target today? 💪`,
-    `${s} any newbies need help?`,
-    `how we all feeling today?`,
-    `${s} anyone else love this platform fr`,
-    `yo whos withdrawing today?`,
-    `${s} how long yall been on here?`
-  ];
+  // Check if someone asked a question in recent context
+  const lastFew = recentContext.slice(-3).join(' ').toLowerCase();
+  const hasQuestion = lastFew.includes('?') || lastFew.includes('anyone') || lastFew.includes('how');
   
-  const tier1Messages = [
-    `${s} just did ${randomTasks} tasks, cant wait for month end 💰`,
-    `grinding today, ${randomTasks} done already 🔥`,
-    `watching these vids is easy money ${s}`,
-    `${randomTasks} tasks in, need a break`,
-    `${s} slowly building up my balance`,
-    `tired but ${randomTasks} tasks done today`,
-    `anyone else counting down to payday? 😅`,
-    `${s} this grind is real`,
-    `coffee and tasks all day ${s}`,
-    `${randomTasks} done, taking 5 mins break`,
-    `${s} yo how many tasks u guys doing daily?`,
-    `man i cant wait to upgrade ${s}`,
-    `anyone on tier 1 like me? how u finding it?`
-  ];
-
-  const tier2Messages = [
-    `${s} weekly payout came through £${withdrawAmount} 💪`,
-    `just did ${randomTasks} tasks, friday cant come soon enough`,
-    `${s} love these weekly withdrawals`,
-    `£${randomEarnings} this week so far not bad`,
-    `${randomTasks} tasks done ${s}`,
-    `that upgrade was worth it ${s}`,
-    `my friday payout was £${withdrawAmount}`,
-    `grinding between breaks, ${randomTasks} tasks today`,
-    `weekly rhythm is perfect ${s}`,
-    `${s} just hit ${randomTasks} tasks`,
-    `${s} yo anyone else on tier 2? the weekly payouts are 🔥`,
-    `just got my £${withdrawAmount} friday, love this ${s}`,
-    `who else upgraded to tier 2? best decision ${s}`
-  ];
-
-  const tier3Messages = [
-    `${s} just withdrew £${withdrawAmount} took 2 mins`,
-    `${randomTasks} tasks today, already pulled £${withdrawAmount} 💰`,
-    `${s} love withdrawing whenever i want`,
-    `easy £${randomEarnings} this morning`,
-    `${s} pulled another £${withdrawAmount}`,
-    `${randomTasks} tasks smashed, might withdraw again`,
-    `${s} tier 3 is the move fr`,
-    `hit £${randomEarnings} today withdrew half already`,
-    `${s} this instant withdrawal is 🔥`,
-    `just withdrew £${withdrawAmount} again ${s}`,
-    `${s} yo tier 3 gang where u at`,
-    `anyone need proof withdrawals work? just got £${withdrawAmount} ${s}`,
-    `${s} been on tier 3 for 2 months now, no regrets`
-  ];
-
-  // 40% chance of interactive message
-  if (isInteractive || Math.random() < 0.4) {
-    return interactiveMessages[Math.floor(Math.random() * interactiveMessages.length)];
+  // If theres a recent question, maybe answer it
+  if (hasQuestion && Math.random() < 0.5) {
+    if (lastFew.includes('task') || lastFew.includes('how many')) {
+      return getRandomElement([
+        `${s} i did ${randomTasks} today`,
+        `about ${randomTasks} for me ${s}`,
+        `${randomTasks} and still going ${s}`
+      ]);
+    }
+    if (lastFew.includes('withdraw') || lastFew.includes('paid') || lastFew.includes('money')) {
+      if (agent.tier === 1) {
+        return getRandomElement([
+          `${s} waiting for month end, got a nice amount saved up`,
+          `tier 1 here, payday on the 30th ${s}`
+        ]);
+      } else if (agent.tier === 2) {
+        return getRandomElement([
+          `got £${withdrawAmount} on friday ${s}`,
+          `${s} weekly payouts are smooth, £${withdrawAmount} last week`
+        ]);
+      } else {
+        return getRandomElement([
+          `${s} just withdrew £${withdrawAmount}`,
+          `pulled £${withdrawAmount} earlier ${s} instant`
+        ]);
+      }
+    }
+    if (lastFew.includes('upgrade') || lastFew.includes('tier')) {
+      if (agent.tier >= 2) {
+        return getRandomElement([
+          `${s} upgrading was worth it for me`,
+          `100% recommend ${s} the payouts are better`
+        ]);
+      }
+    }
   }
-
-  const messages = agent.tier === 1 ? tier1Messages : agent.tier === 2 ? tier2Messages : tier3Messages;
-  return messages[Math.floor(Math.random() * messages.length)];
+  
+  // Otherwise generate contextual messages
+  const messageTypes = [
+    // Status updates
+    () => getRandomElement([
+      `${s} just finished ${randomTasks} tasks`,
+      `${randomTasks} done today ${s}`,
+      `grinding hard today, ${randomTasks} in ${s}`,
+      `${s} taking a break, ${randomTasks} tasks done`
+    ]),
+    // Tier-specific updates
+    () => {
+      if (agent.tier === 1) {
+        return getRandomElement([
+          `${s} ${Math.floor(Math.random() * 15) + 5} days til payday`,
+          `balance looking good ${s} cant wait for month end`,
+          `${s} slowly building up my earnings`
+        ]);
+      } else if (agent.tier === 2) {
+        return getRandomElement([
+          `friday payout was £${withdrawAmount} ${s}`,
+          `${s} love these weekly payouts`,
+          `another week another £${withdrawAmount} ${s}`
+        ]);
+      } else {
+        return getRandomElement([
+          `just withdrew £${withdrawAmount} ${s}`,
+          `${s} pulled another £${withdrawAmount} quick`,
+          `tier 3 life ${s} instant withdrawals are 🔥`
+        ]);
+      }
+    },
+    // Questions to the group
+    () => getRandomElement([
+      `anyone else grinding rn? ${s}`,
+      `${s} hows everyones day going?`,
+      `who else is online? ${s}`,
+      `${s} what tasks yall doing today?`,
+      `hows the grind going everyone? ${s}`
+    ]),
+    // Encouragement
+    () => getRandomElement([
+      `keep it up everyone ${s} 💪`,
+      `${s} we eating good this month`,
+      `love this community ${s}`,
+      `${s} best platform honestly`
+    ])
+  ];
+  
+  return getRandomElement(messageTypes)();
 }
 
 function generateWelcomeMessage(agent: Agent, userName: string): string {
-  const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
+  const s = getRandomElement(agent.slang);
   
-  const welcomes = [
-    `yo ${userName} welcome! ${s} 👋`,
-    `${s} ${userName} joined! whats good`,
-    `ayy ${userName}! welcome to the team ${s}`,
-    `${userName}! ${s} good to see u`,
-    `welcome ${userName} ${s} 🔥`,
-    `${s} yo ${userName} hows it going?`,
-    `${userName} in the building ${s}`,
-    `${s} ${userName}! u new here or been grinding?`,
-    `ayy ${userName} welcome ${s}`,
-    `${s} ${userName} whats good fam`
-  ];
-  
-  return welcomes[Math.floor(Math.random() * welcomes.length)];
-}
-
-function generateFallbackReply(agent: Agent, userMessage: string): string {
-  const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
-  const randomTasks = Math.floor(Math.random() * 40) + 15;
-  const tier2Amounts = [127, 145, 168, 182, 195, 210];
-  const tier3Amounts = [85, 120, 145, 167, 185, 200];
-  const withdrawAmount = agent.tier === 2 
-    ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
-    : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
-
-  const lower = userMessage.toLowerCase();
-  
-  if (lower.includes('withdraw') || lower.includes('payout') || lower.includes('money') || lower.includes('paid')) {
-    if (agent.tier === 1) {
-      return getRandomElement([
-        `${s} still waiting for month end`,
-        `nah gotta wait til the 30th`,
-        `tier 1 life, counting down the days ${s}`,
-        `cant withdraw yet, but balance looking nice`,
-        `${s} payday soon tho`
-      ]);
-    } else if (agent.tier === 2) {
-      return getRandomElement([
-        `${s} got £${withdrawAmount} friday`,
-        `weekly payout came through smooth`,
-        `yeah £${withdrawAmount} last week ${s}`,
-        `friday payday is the best ${s}`,
-        `${s} weekly withdrawals hit different`
-      ]);
-    } else {
-      return getRandomElement([
-        `${s} just withdrew £${withdrawAmount} earlier`,
-        `yeah pulled £${withdrawAmount} this morning`,
-        `instant withdrawals are 🔥 ${s}`,
-        `withdrew £${withdrawAmount} took like 2 mins`,
-        `${s} anytime withdrawals are elite`
-      ]);
-    }
-  }
-
   return getRandomElement([
-    `${s} same here`,
-    `nice one 👍`,
-    `${s} facts`,
-    `yeah bro ${s}`,
-    `${s} 💪`,
-    `real talk ${s}`,
-    `same ${s}`,
-    `${s} totally`,
-    `yep ${s}`,
-    `${s} true`
+    `yo ${userName}! ${s} welcome 👋`,
+    `${s} ayy ${userName} whats good!`,
+    `${userName}! nice to see u ${s}`,
+    `welcome ${userName} ${s} how u doing?`,
+    `${s} ${userName} welcome to the chat!`,
+    `ayy ${userName} in here ${s} 🔥`,
+    `${userName}! ${s} good to have u`,
+    `${s} yo ${userName}! u grinding today?`,
+    `welcome fam ${userName} ${s}`,
+    `${userName} ${s} hows it going?`
   ]);
 }
 
@@ -408,10 +602,10 @@ Keep it SHORT and REAL. One sentence, maybe two. Like a quick text to friends.`
       temperature: 1.1,
     });
 
-    messageContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(randomAgent);
+    messageContent = completion.choices[0]?.message?.content?.trim() || generateAutoMessage(randomAgent, context.split('\n'));
   } catch (error) {
     console.error('OpenAI error, using fallback:', error);
-    messageContent = generateFallbackMessage(randomAgent);
+    messageContent = generateAutoMessage(randomAgent, context.split('\n'));
   }
   
   return saveMessage(roomId, 'agent', randomAgent.name, randomAgent.id, messageContent);
@@ -474,10 +668,10 @@ Reply like a real friend would. Short, casual, helpful. One or two sentences max
         temperature: 0.95,
       });
 
-      responseContent = completion.choices[0]?.message?.content?.trim() || generateFallbackReply(agent, userMessage);
+      responseContent = completion.choices[0]?.message?.content?.trim() || generateSmartReply(agent, userMessage, userName, context.split('\n'));
     } catch (error) {
       console.error('OpenAI error, using fallback:', error);
-      responseContent = generateFallbackReply(agent, userMessage);
+      responseContent = generateSmartReply(agent, userMessage, userName, context.split('\n'));
     }
 
     const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
@@ -524,10 +718,10 @@ export async function initializeRoom(roomId: string): Promise<any[]> {
         temperature: 1.0,
       });
 
-      messageContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(agent);
+      messageContent = completion.choices[0]?.message?.content?.trim() || generateAutoMessage(agent, existingContext.split('\n'));
     } catch (error) {
       console.error('Init error, using fallback:', error);
-      messageContent = generateFallbackMessage(agent);
+      messageContent = generateAutoMessage(agent, existingContext.split('\n'));
     }
 
     const saved = await saveMessage(roomId, 'agent', agent.name, agent.id, messageContent);
