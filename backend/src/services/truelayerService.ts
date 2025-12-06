@@ -33,16 +33,13 @@ export interface TrueLayerBalance {
 }
 
 export const truelayerService = {
-  getAuthUrl(redirectUri: string, state: string): string {
-    const scopes = ['info', 'accounts', 'balance', 'offline_access'];
+  getAuthUrl(redirectUri: string, state?: string): string {
+    const scopes = ['info', 'accounts', 'balance', 'transactions'];
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: TRUELAYER_CLIENT_ID,
       redirect_uri: redirectUri,
       scope: scopes.join(' '),
-      nonce: Date.now().toString(),
-      response_mode: 'query',
-      state: state,
       providers: 'uk-ob-all'
     });
     

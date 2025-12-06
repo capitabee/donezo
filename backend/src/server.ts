@@ -44,6 +44,49 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// TrueLayer OAuth callback - simple redirect flow
+app.get("/truelayer/callback", async (req, res) => {
+  const code = req.query.code as string;
+  
+  if (!code) {
+    console.error("TrueLayer callback: No code received");
+    return res.redirect("/#/dashboard?bank=error");
+  }
+
+  try {
+    const baseUrl = process.env.REPLIT_DOMAINS ? 
+      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
+      'http://localhost:5000';
+    
+    const tokenRes = await fetch("https://auth.truelayer.com/connect/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: process.env.TRUELAYER_CLIENT_ID || '',
+        client_secret: process.env.TRUELAYER_CLIENT_SECRET || '',
+        redirect_uri: `${baseUrl}/truelayer/callback`,
+        code
+      })
+    });
+
+    const tokens = await tokenRes.json();
+    console.log("TOKENS:", tokens);
+    
+    if (tokens.error) {
+      console.error("TrueLayer token error:", tokens);
+      return res.redirect("/#/dashboard?bank=error");
+    }
+
+    res.redirect("/#/dashboard?bank=connected");
+  } catch (error) {
+    console.error("TrueLayer callback error:", error);
+    res.redirect("/#/dashboard?bank=error");
+  }
+});
+
 const authenticateToken = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -1036,11 +1079,10 @@ app.get('/api/truelayer/auth-url', authenticateToken, async (req: any, res) => {
     const baseUrl = process.env.REPLIT_DOMAINS ? 
       `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
       'http://localhost:5000';
-    // Backend handles the callback, then redirects to frontend
-    const redirectUri = `${baseUrl}/api/truelayer/oauth-callback`;
-    const state = Buffer.from(JSON.stringify({ userId: req.user.userId })).toString('base64');
+    // Use simple callback path
+    const redirectUri = `${baseUrl}/truelayer/callback`;
     
-    const authUrl = truelayerService.getAuthUrl(redirectUri, state);
+    const authUrl = truelayerService.getAuthUrl(redirectUri);
     res.json({ authUrl });
   } catch (error) {
     console.error('TrueLayer auth URL error:', error);
