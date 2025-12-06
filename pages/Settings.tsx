@@ -302,30 +302,18 @@ const Settings = () => {
                   <div className="flex items-center gap-2 text-green-800 font-bold text-sm mb-1">
                     <Shield size={16} /> Bank Connected
                   </div>
-                  <p className="text-xs text-green-700">Your UK bank is connected via Open Banking.</p>
+                  <p className="text-xs text-green-700">Your UK bank is connected to receive salary payments.</p>
                 </div>
 
                 <div className="space-y-3 relative z-10">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Provider</span>
-                    <span className="font-medium text-gray-900">TrueLayer (Open Banking)</span>
+                    <span className="text-gray-500">Connection</span>
+                    <span className="font-medium text-gray-900">Open Banking (TrueLayer)</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Status</span>
                     <span className="font-medium text-green-600">Active</span>
                   </div>
-                  {truelayerStatus.balance !== null && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Balance</span>
-                      <span className="font-bold text-gray-900">£{truelayerStatus.balance.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                  {truelayerStatus.balanceUpdatedAt && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Last Updated</span>
-                      <span className="font-medium text-gray-600">{new Date(truelayerStatus.balanceUpdatedAt).toLocaleString('en-GB')}</span>
-                    </div>
-                  )}
                 </div>
 
                 <button 
