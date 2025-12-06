@@ -71,6 +71,13 @@ class ApiService {
     return this.request('/onboarding/complete', { method: 'POST' });
   }
 
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   async createMandateSession() {
     return this.request('/billing/mandate/session', { method: 'POST' });
   }

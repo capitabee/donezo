@@ -322,6 +322,45 @@ app.post('/api/onboarding/complete', authenticateToken, async (req: any, res) =>
   }
 });
 
+// Change password endpoint
+app.post('/api/auth/change-password', authenticateToken, async (req: any, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+    
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+    
+    const user = await userService.getUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    
+    // Hash new password and update
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await userService.updateUser(req.user.userId, {
+      password_hash: newPasswordHash
+    } as any);
+    
+    console.log(`Password changed for user: ${user.email}`);
+    
+    res.json({ success: true, message: 'Password changed successfully. Please sign in with your new password.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 app.get('/api/referral/info', authenticateToken, async (req: any, res) => {
   try {
     const user = await userService.getUserById(req.user.userId);
