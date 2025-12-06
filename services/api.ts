@@ -140,6 +140,10 @@ class ApiService {
     return this.request('/earnings');
   }
 
+  async getEarningsActivity() {
+    return this.request('/earnings/activity');
+  }
+
   async chat(message: string) {
     return this.request('/chat', {
       method: 'POST',

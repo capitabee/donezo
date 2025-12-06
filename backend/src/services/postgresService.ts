@@ -343,6 +343,84 @@ export const pgApiKeyService = {
   }
 };
 
+export interface DBChatMessage {
+  id: string;
+  user_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+export const pgChatService = {
+  async getChatHistory(userId: string, limit: number = 20): Promise<DBChatMessage[]> {
+    const result = await pool.query(
+      'SELECT * FROM chat_messages WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2',
+      [userId, limit]
+    );
+    return result.rows.reverse();
+  },
+
+  async saveMessage(userId: string, role: 'user' | 'assistant', content: string): Promise<DBChatMessage | null> {
+    const result = await pool.query(
+      `INSERT INTO chat_messages (user_id, role, content) VALUES ($1, $2, $3) RETURNING *`,
+      [userId, role, content]
+    );
+    return result.rows[0] || null;
+  },
+
+  async clearChatHistory(userId: string): Promise<boolean> {
+    await pool.query('DELETE FROM chat_messages WHERE user_id = $1', [userId]);
+    return true;
+  }
+};
+
+export const pgEarningsService = {
+  async getRecentActivity(userId: string, limit: number = 10): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT tc.id, tc.completed_at, tc.payout_amount, tc.ai_verification_status, 
+              t.platform, t.title, t.category
+       FROM task_completions tc
+       JOIN tasks t ON tc.task_id = t.id
+       WHERE tc.user_id = $1 AND tc.status = 'completed'
+       ORDER BY tc.completed_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+    return result.rows;
+  },
+
+  async getEarningsSummary(userId: string): Promise<{ totalEarnings: number; completedTasks: number; thisWeek: number; thisMonth: number }> {
+    const total = await pool.query(
+      `SELECT COALESCE(SUM(payout_amount), 0) as total, COUNT(*) as count 
+       FROM task_completions WHERE user_id = $1 AND status = 'completed'`,
+      [userId]
+    );
+    
+    const thisWeek = await pool.query(
+      `SELECT COALESCE(SUM(payout_amount), 0) as total 
+       FROM task_completions 
+       WHERE user_id = $1 AND status = 'completed' 
+       AND completed_at >= NOW() - INTERVAL '7 days'`,
+      [userId]
+    );
+    
+    const thisMonth = await pool.query(
+      `SELECT COALESCE(SUM(payout_amount), 0) as total 
+       FROM task_completions 
+       WHERE user_id = $1 AND status = 'completed' 
+       AND completed_at >= DATE_TRUNC('month', NOW())`,
+      [userId]
+    );
+    
+    return {
+      totalEarnings: Number(total.rows[0]?.total || 0),
+      completedTasks: Number(total.rows[0]?.count || 0),
+      thisWeek: Number(thisWeek.rows[0]?.total || 0),
+      thisMonth: Number(thisMonth.rows[0]?.total || 0)
+    };
+  }
+};
+
 export const isPostgresConfigured = (): boolean => {
   return !!process.env.DATABASE_URL;
 };
@@ -354,6 +432,8 @@ export default {
   pgTransactionService,
   pgAdminMessageService,
   pgApiKeyService,
+  pgChatService,
+  pgEarningsService,
   isPostgresConfigured,
   pool
 };

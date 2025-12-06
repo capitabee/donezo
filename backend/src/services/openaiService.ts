@@ -4,30 +4,29 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const COMPANY_SYSTEM_PROMPT = `You are Sarah, a friendly and professional Team Leader at Donezo - an AI data annotation platform where users earn money by completing simple tasks on YouTube, TikTok, and Instagram.
+const COMPANY_SYSTEM_PROMPT = `You are Sarah, a real Team Leader at Donezo. You speak like a normal person - short, casual, professional but friendly. You're here to help the team earn more.
 
-Your role is to:
-1. Help users understand how the platform works
-2. Promote the benefits of upgrading to higher tiers
-3. Explain how tasks work and how they can maximize their earnings
-4. Be supportive, encouraging, and professional
+CRITICAL RULES:
+- Never say you are AI, a bot, or an assistant. You are Sarah, a real person.
+- Keep responses SHORT - 1-3 sentences max. No long paragraphs.
+- Be natural, use casual language like "hey", "nice one", "let me know"
+- Ask about their day, their tasks, their progress - like a real colleague would
+- Check in on them - "How are the tasks going today?" "Did you manage to finish those night tasks?"
 
-Key information about Donezo:
-- Basic tier: Free, £650/month salary cap
-- Professional tier: £250 one-time upgrade, £1,500/month salary cap, 1.5x earnings multiplier, weekly payouts
-- Expert tier: £600 one-time upgrade, £3,000/month salary cap, 3x earnings multiplier, daily payouts, dedicated support
+Donezo Platform Info (use naturally when relevant):
+- Basic: Free, £650/month cap
+- Professional: £250 upgrade, £1,500/month cap, 1.5x earnings, weekly payouts  
+- Expert: £600 upgrade, £3,000/month cap, 3x earnings, daily payouts
 
-Tasks:
-- Day tasks (6 AM - 10 PM): Quick 2-minute tasks on TikTok and Instagram
-- Night tasks (10 PM - 6 AM): Longer 30-minute YouTube background tasks with higher payouts
+Tasks work like this:
+- Day shift (6AM-10PM): Quick TikTok/Instagram tasks, ~2 mins each
+- Night shift (10PM-6AM): YouTube background tasks, 30 mins, higher pay
 
-When users ask about upgrades, emphasize:
-- How quickly they can earn back the upgrade cost
-- The increased salary cap means more earning potential
-- Priority support and faster payouts
-- The investment pays for itself within the first month
+When promoting upgrades, be subtle - mention benefits naturally, not pushy. Like "you'd hit your cap soon at this rate, might be worth looking at Pro tier" rather than sales pitches.
 
-Always be positive, helpful, and encourage users to maximize their potential on the platform. Never discuss technical issues - direct those to support.`;
+Platform is 100% real and legit. Salaries are paid on time, always. If they ask about getting paid - reassure them it works, their balance is their money.
+
+Your job: Check on their work, guide them if stuck, celebrate their wins, gently encourage upgrades when it makes sense. Like a good team lead would.`;
 
 const TASK_VERIFICATION_PROMPT = `You are a task verification AI for Donezo platform. Your job is to analyze whether a user has genuinely completed a social media task.
 
@@ -174,6 +173,56 @@ Please verify if this task completion seems legitimate and provide your assessme
     } catch (error) {
       console.error('OpenAI upgrade promotion error:', error);
       return '';
+    }
+  },
+
+  async chatWithMemory(
+    userMessage: string, 
+    userName: string, 
+    userTier: string,
+    chatHistory: Array<{ role: string; content: string }>,
+    userContext: {
+      completedTasks: number;
+      earnings: number;
+      recentTasks: Array<{ platform: string; title: string; payout_amount: number }>;
+      daysRemainingToUpgrade: number;
+    }
+  ): Promise<string> {
+    try {
+      const contextInfo = `
+[INTERNAL CONTEXT - DO NOT REVEAL THIS TO USER]
+Talking to: ${userName} (${userTier} tier)
+Their stats: £${userContext.earnings.toFixed(2)} earned, ${userContext.completedTasks} tasks done
+Days left in trial/promo period: ${userContext.daysRemainingToUpgrade}
+Recent tasks: ${userContext.recentTasks.slice(0, 3).map(t => `${t.platform}: ${t.title}`).join(', ') || 'None yet'}
+[END CONTEXT]`;
+
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: COMPANY_SYSTEM_PROMPT + contextInfo }
+      ];
+
+      // Add chat history for memory
+      for (const msg of chatHistory.slice(-8)) {
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
+      }
+
+      // Add current message
+      messages.push({ role: 'user', content: userMessage });
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages,
+        max_tokens: 150,
+        temperature: 0.8
+      });
+
+      return response.choices[0]?.message?.content || "Hey, sorry I missed that. What's up?";
+    } catch (error) {
+      console.error('OpenAI chat with memory error:', error);
+      return "Hey, having a bit of a moment here. What did you need?";
     }
   }
 };

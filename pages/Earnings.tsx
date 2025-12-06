@@ -27,24 +27,58 @@ const Earnings = () => {
   useEffect(() => {
     const loadEarnings = async () => {
       try {
-        const data = await api.getEarnings();
-        if (data.transactions && data.transactions.length > 0) {
-          setTransactions(data.transactions);
-          
-          const grouped: { [key: string]: number } = {};
-          data.transactions.forEach((tx: Transaction) => {
-            const date = new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            if (!grouped[date]) grouped[date] = 0;
-            if (tx.amount > 0) grouped[date] += tx.amount;
+        // Load from both endpoints for comprehensive data
+        const [earningsData, activityData] = await Promise.all([
+          api.getEarnings().catch(() => ({ transactions: [] })),
+          api.getEarningsActivity().catch(() => ({ recentActivity: [], summary: {} }))
+        ]);
+        
+        // Combine transactions from both sources
+        const allTransactions: Transaction[] = [];
+        
+        // Add activity data (completed tasks)
+        if (activityData.recentActivity) {
+          activityData.recentActivity.forEach((item: any) => {
+            allTransactions.push({
+              id: item.id,
+              type: 'task_earning',
+              amount: Number(item.payout || 0),
+              description: `${item.platform}: ${item.title}`,
+              status: item.status || 'completed',
+              date: item.completedAt
+            });
           });
-          
-          const chartPoints = Object.entries(grouped)
-            .slice(-7)
-            .map(([name, amount]) => ({ name, amount: Number(amount.toFixed(2)) }));
-          
-          if (chartPoints.length > 0) {
-            setChartData(chartPoints);
-          }
+        }
+        
+        // Add transaction history
+        if (earningsData.transactions) {
+          earningsData.transactions.forEach((tx: Transaction) => {
+            // Avoid duplicates
+            if (!allTransactions.find(t => t.id === tx.id)) {
+              allTransactions.push(tx);
+            }
+          });
+        }
+        
+        // Sort by date descending
+        allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setTransactions(allTransactions);
+        
+        // Build chart data
+        const grouped: { [key: string]: number } = {};
+        allTransactions.forEach((tx: Transaction) => {
+          const date = new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          if (!grouped[date]) grouped[date] = 0;
+          if (tx.amount > 0) grouped[date] += tx.amount;
+        });
+        
+        const chartPoints = Object.entries(grouped)
+          .slice(-7)
+          .map(([name, amount]) => ({ name, amount: Number(amount.toFixed(2)) }));
+        
+        if (chartPoints.length > 0) {
+          setChartData(chartPoints);
         }
       } catch (error) {
         console.error('Failed to load earnings:', error);

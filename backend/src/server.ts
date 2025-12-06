@@ -18,6 +18,8 @@ import {
   pgTransactionService,
   pgApiKeyService,
   pgAdminMessageService,
+  pgChatService,
+  pgEarningsService,
   isPostgresConfigured
 } from './services/postgresService';
 import stripeService from './services/stripeService';
@@ -271,16 +273,24 @@ app.get('/api/auth/me', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Calculate upgrade deadline (7 days from signup)
+    const signupDate = new Date((user as any).signup_date || user.created_at);
+    const upgradeDeadline = new Date(signupDate);
+    upgradeDeadline.setDate(upgradeDeadline.getDate() + 7);
+    const daysRemaining = Math.max(0, Math.ceil((upgradeDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
     res.json({
       id: user.id,
       name: user.name,
       email: user.email,
       tier: user.tier,
-      earnings: user.earnings,
-      qualityScore: user.quality_score,
-      completedTasks: user.completed_tasks,
+      earnings: Number(user.earnings || 0),
+      qualityScore: Number(user.quality_score || 100),
+      completedTasks: Number(user.completed_tasks || 0),
       mandateActive: user.mandate_active,
-      signupDate: user.created_at
+      signupDate: user.created_at,
+      upgradeDeadline: upgradeDeadline.toISOString(),
+      daysRemainingToUpgrade: daysRemaining
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -411,10 +421,63 @@ app.post('/api/chat', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const response = await openaiService.chat(message, user.name, user.tier);
+    // Get chat history from database for context
+    const chatHistory = await pgChatService.getChatHistory(req.user.userId, 10);
+    
+    // Save user message
+    await pgChatService.saveMessage(req.user.userId, 'user', message);
+    
+    // Get user's recent task completions
+    const recentActivity = await pgEarningsService.getRecentActivity(req.user.userId, 5);
+    
+    // Calculate upgrade deadline days remaining
+    const signupDate = new Date((user as any).signup_date || (user as any).created_at);
+    const upgradeDeadline = new Date(signupDate);
+    upgradeDeadline.setDate(upgradeDeadline.getDate() + 7);
+    const daysRemaining = Math.max(0, Math.ceil((upgradeDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+    
+    const response = await openaiService.chatWithMemory(
+      message, 
+      user.name, 
+      user.tier,
+      chatHistory.map(m => ({ role: m.role, content: m.content })),
+      {
+        completedTasks: (user as any).completed_tasks || 0,
+        earnings: Number((user as any).earnings || 0),
+        recentTasks: recentActivity,
+        daysRemainingToUpgrade: daysRemaining
+      }
+    );
+    
+    // Save assistant response
+    await pgChatService.saveMessage(req.user.userId, 'assistant', response);
+    
     res.json({ response });
   } catch (error) {
     console.error('Chat error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/earnings/activity', authenticateToken, async (req: any, res) => {
+  try {
+    const recentActivity = await pgEarningsService.getRecentActivity(req.user.userId, 20);
+    const summary = await pgEarningsService.getEarningsSummary(req.user.userId);
+    
+    res.json({
+      recentActivity: recentActivity.map(item => ({
+        id: item.id,
+        platform: item.platform,
+        title: item.title,
+        category: item.category,
+        payout: Number(item.payout_amount),
+        completedAt: item.completed_at,
+        status: item.ai_verification_status
+      })),
+      summary
+    });
+  } catch (error) {
+    console.error('Get earnings activity error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

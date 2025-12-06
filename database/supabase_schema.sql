@@ -110,6 +110,29 @@ CREATE TABLE IF NOT EXISTS referrals (
   UNIQUE(referrer_id, referred_id)
 );
 
+-- Chat memory table for AI conversation history
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add upgrade_deadline column to users if not exists
+ALTER TABLE users ADD COLUMN IF NOT EXISTS upgrade_deadline TIMESTAMP WITH TIME ZONE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10, 2) DEFAULT 0.00;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_earnings DECIMAL(10, 2) DEFAULT 0.00;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_date TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Index for chat messages
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at DESC);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_tier ON users(tier);
