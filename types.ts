@@ -17,6 +17,7 @@ export interface User {
   qualityScore: number;
   completedTasks: number;
   referralLink?: string;
+  referralCode?: string;
 }
 
 export type TaskPlatform = 'YouTube' | 'TikTok' | 'Instagram';

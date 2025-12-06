@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   Cell, RadialBarChart, RadialBar, Legend
 } from 'recharts';
-import { Play, MoreHorizontal, Clock, Plus, Folder, Briefcase, CheckCircle, AlertCircle, Upload, MessageCircle } from 'lucide-react';
+import { Play, MoreHorizontal, Clock, Plus, Folder, Briefcase, CheckCircle, AlertCircle, Upload, MessageCircle, CreditCard, Copy, Check, Wifi } from 'lucide-react';
 
 const data = [
   { name: 'S', value: 40 },
@@ -32,6 +32,19 @@ const DashboardHome = () => {
     setIsChatOpen,
   } = useOutletContext<DashboardOutletContext>();
   const [timeLeft, setTimeLeft] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyReferral = () => {
+    const referralLink = `${window.location.origin}/#/signup?ref=${user.referralCode || 'DONEZO'}`;
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const formatCardNumber = (name: string) => {
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return `4532 ${String(hash % 10000).padStart(4, '0')} ${String((hash * 7) % 10000).padStart(4, '0')} ${String((hash * 13) % 10000).padStart(4, '0')}`;
+  };
 
   // Countdown logic for 7 days (simulated start date)
   useEffect(() => {
@@ -114,6 +127,104 @@ const DashboardHome = () => {
           theme="light"
           icon={<AlertCircle size={20} className="text-gray-600" />}
         />
+      </div>
+
+      {/* Your Bank Section - Gold Debit Card */}
+      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+            <CreditCard size={20} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800">Your Bank</h2>
+        </div>
+
+        <div className="relative w-full max-w-md mx-auto">
+          {/* Gold Debit Card */}
+          <div className="relative h-56 rounded-2xl overflow-hidden" style={{
+            background: 'linear-gradient(135deg, #f5d77a 0%, #d4a84b 25%, #c9a227 50%, #e6c84b 75%, #f5d77a 100%)'
+          }}>
+            {/* Card Pattern Overlay */}
+            <div className="absolute inset-0 opacity-20">
+              <svg className="w-full h-full" viewBox="0 0 400 250">
+                <defs>
+                  <pattern id="circuit" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+                    <circle cx="25" cy="25" r="1" fill="#000"/>
+                    <path d="M25 25 L50 25 M25 25 L25 0" stroke="#000" strokeWidth="0.5" fill="none"/>
+                  </pattern>
+                </defs>
+                <rect width="400" height="250" fill="url(#circuit)"/>
+              </svg>
+            </div>
+
+            {/* Card Content */}
+            <div className="absolute inset-0 p-6 flex flex-col justify-between">
+              {/* Top Row - Logo & Wireless */}
+              <div className="flex justify-between items-start">
+                <div className="text-white font-bold text-xl tracking-wider drop-shadow-lg" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+                  DONEZO
+                </div>
+                <Wifi size={28} className="text-white/80 rotate-90" />
+              </div>
+
+              {/* Chip */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-200 via-yellow-100 to-yellow-300 border border-yellow-400/50 flex items-center justify-center">
+                  <div className="w-8 h-6 border border-yellow-500/30 rounded-sm grid grid-cols-3 gap-px p-0.5">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="bg-yellow-400/40 rounded-sm"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Number */}
+              <div className="text-white font-mono text-lg tracking-widest drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+                {formatCardNumber(user.name || 'User')}
+              </div>
+
+              {/* Bottom Row - Name & Referral */}
+              <div className="flex justify-between items-end">
+                <div>
+                  <div className="text-white/70 text-xs uppercase tracking-wider mb-1">Card Holder</div>
+                  <div className="text-white font-semibold uppercase tracking-wide" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+                    {user.name || 'MEMBER'}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-white/70 text-xs uppercase tracking-wider mb-1">Referral Code</div>
+                  <button
+                    onClick={handleCopyReferral}
+                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors backdrop-blur-sm"
+                  >
+                    <span className="text-white font-mono font-bold tracking-wider" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+                      {user.referralCode || 'DONEZO'}
+                    </span>
+                    {copied ? (
+                      <Check size={14} className="text-green-300" />
+                    ) : (
+                      <Copy size={14} className="text-white/80" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Shine Effect */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none"></div>
+          </div>
+
+          {/* Card Info Below */}
+          <div className="mt-4 flex justify-between text-sm text-gray-500">
+            <div>
+              <span className="text-gray-400">Status:</span>{' '}
+              <span className="text-green-600 font-medium">Active</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Tier:</span>{' '}
+              <span className="font-medium text-gray-700 capitalize">{user.tier}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Grid */}
