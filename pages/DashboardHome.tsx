@@ -41,9 +41,9 @@ const DashboardHome = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatCardNumber = (name: string) => {
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return `4532 ${String(hash % 10000).padStart(4, '0')} ${String((hash * 7) % 10000).padStart(4, '0')} ${String((hash * 13) % 10000).padStart(4, '0')}`;
+  const formatEmployeeId = (id: string) => {
+    const cleanId = id.replace(/-/g, '').toUpperCase().slice(0, 16);
+    return `${cleanId.slice(0, 4)} ${cleanId.slice(4, 8)} ${cleanId.slice(8, 12)} ${cleanId.slice(12, 16)}`;
   };
 
   // Countdown logic for 7 days (simulated start date)
@@ -177,12 +177,15 @@ const DashboardHome = () => {
                 </div>
               </div>
 
-              {/* Card Number */}
-              <div className="text-white font-mono text-lg tracking-widest drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
-                {formatCardNumber(user.name || 'User')}
+              {/* Employee ID Number */}
+              <div>
+                <div className="text-white/70 text-xs uppercase tracking-wider mb-1">Employee ID</div>
+                <div className="text-white font-mono text-lg tracking-widest drop-shadow-md" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+                  {formatEmployeeId(user.id || '0000000000000000')}
+                </div>
               </div>
 
-              {/* Bottom Row - Name & Referral */}
+              {/* Bottom Row - Name & Referral Link */}
               <div className="flex justify-between items-end">
                 <div>
                   <div className="text-white/70 text-xs uppercase tracking-wider mb-1">Card Holder</div>
@@ -190,22 +193,19 @@ const DashboardHome = () => {
                     {user.name || 'MEMBER'}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-white/70 text-xs uppercase tracking-wider mb-1">Referral Code</div>
-                  <button
-                    onClick={handleCopyReferral}
-                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors backdrop-blur-sm"
-                  >
-                    <span className="text-white font-mono font-bold tracking-wider" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
-                      {user.referralCode || 'DONEZO'}
-                    </span>
-                    {copied ? (
-                      <Check size={14} className="text-green-300" />
-                    ) : (
-                      <Copy size={14} className="text-white/80" />
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleCopyReferral}
+                  className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors backdrop-blur-sm"
+                >
+                  <span className="text-white font-semibold text-sm" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}>
+                    {copied ? 'Link Copied!' : 'Copy Referral Link'}
+                  </span>
+                  {copied ? (
+                    <Check size={16} className="text-green-300" />
+                  ) : (
+                    <Copy size={16} className="text-white/80" />
+                  )}
+                </button>
               </div>
             </div>
 
