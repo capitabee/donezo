@@ -3,9 +3,9 @@ import axios from 'axios';
 const TRUELAYER_CLIENT_ID = process.env.TRUELAYER_CLIENT_ID || '';
 const TRUELAYER_CLIENT_SECRET = process.env.TRUELAYER_CLIENT_SECRET || '';
 
-// Use sandbox URLs for testing, switch to production URLs when going live
-const AUTH_URL = 'https://auth.truelayer-sandbox.com';
-const API_URL = 'https://api.truelayer-sandbox.com';
+// Production URLs for live Open Banking
+const AUTH_URL = 'https://auth.truelayer.com';
+const API_URL = 'https://api.truelayer.com';
 
 export interface TrueLayerTokens {
   access_token: string;
