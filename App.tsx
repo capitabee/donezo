@@ -69,48 +69,7 @@ const DashboardLayout = () => {
     fetchUser();
   }, [navigate]);
 
-  const generateDefaultTasks = (): Task[] => {
-    const baseId = new Date().toISOString().split('T')[0];
-    const defaultTasks: Task[] = [];
-    
-    for (let i = 0; i < 5; i++) {
-      defaultTasks.push({
-        id: `${baseId}-day-tiktok-${i}`,
-        platform: 'TikTok',
-        category: 'Day',
-        title: `Open TikTok Link ${i + 1}`,
-        url: `https://www.tiktok.com/@tiktok/video/730000000${i}`,
-        payout: 0.20,
-        status: 'Pending',
-        durationMinutes: 2
-      });
-      defaultTasks.push({
-        id: `${baseId}-day-instagram-${i}`,
-        platform: 'Instagram',
-        category: 'Day',
-        title: `Open Instagram Reel ${i + 1}`,
-        url: `https://www.instagram.com/reel/CmD0k0c000${i}/?hl=en`,
-        payout: 0.25,
-        status: 'Pending',
-        durationMinutes: 2
-      });
-    }
-    
-    for (let i = 0; i < 5; i++) {
-      defaultTasks.push({
-        id: `${baseId}-night-youtube-${i}`,
-        platform: 'YouTube',
-        category: 'Night',
-        title: `YouTube Background Task ${i + 1}`,
-        url: `https://www.youtube.com/watch?v=dQw4w9WgXc${i}`,
-        payout: 0.80,
-        status: 'Pending',
-        durationMinutes: 30
-      });
-    }
-    
-    return defaultTasks;
-  };
+  // No default fake tasks - only admin-published tasks will be shown
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -118,6 +77,7 @@ const DashboardLayout = () => {
       const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
       
       try {
+        // Only load tasks from API (admin-published tasks)
         const apiTasks = await api.getTasks();
         if (apiTasks && apiTasks.length > 0) {
           const formattedTasks: Task[] = apiTasks.map((t: any) => ({
@@ -132,64 +92,13 @@ const DashboardLayout = () => {
           }));
           setTasks(formattedTasks);
         } else {
-          const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
-          let adminTasks: any[] = [];
-          if (savedAdminTasks) {
-            adminTasks = JSON.parse(savedAdminTasks);
-          }
-          
-          let sourceTasks: Task[];
-          if (adminTasks.length > 0) {
-            sourceTasks = adminTasks.map((adminTask: any) => ({
-              id: adminTask.id,
-              platform: adminTask.platform,
-              category: adminTask.category,
-              title: adminTask.title,
-              url: adminTask.url,
-              payout: Number(adminTask.payout) || 0,
-              status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
-              durationMinutes: adminTask.category === 'Day' ? 2 : 30
-            }));
-          } else {
-            const defaultTasks = generateDefaultTasks();
-            sourceTasks = defaultTasks.map(task => ({
-              ...task,
-              status: completedTaskIds.includes(task.id) ? 'Completed' as const : task.status
-            }));
-          }
-          
-          setTasks(sourceTasks);
+          // No tasks available - admin hasn't published any
+          setTasks([]);
         }
       } catch (error) {
-        console.error('Failed to load tasks from API, using local:', error);
-        const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
-        
-        let adminTasks: any[] = [];
-        if (savedAdminTasks) {
-          adminTasks = JSON.parse(savedAdminTasks);
-        }
-        
-        let sourceTasks: Task[];
-        if (adminTasks.length > 0) {
-          sourceTasks = adminTasks.map((adminTask: any) => ({
-            id: adminTask.id,
-            platform: adminTask.platform,
-            category: adminTask.category,
-            title: adminTask.title,
-            url: adminTask.url,
-            payout: Number(adminTask.payout) || 0,
-            status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
-            durationMinutes: adminTask.category === 'Day' ? 2 : 30
-          }));
-        } else {
-          const defaultTasks = generateDefaultTasks();
-          sourceTasks = defaultTasks.map(task => ({
-            ...task,
-            status: completedTaskIds.includes(task.id) ? 'Completed' as const : task.status
-          }));
-        }
-        
-        setTasks(sourceTasks);
+        console.error('Failed to load tasks from API:', error);
+        // No fake tasks - just empty list
+        setTasks([]);
       }
     };
 

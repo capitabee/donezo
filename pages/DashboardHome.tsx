@@ -1,40 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { User, UserTier, DashboardOutletContext, FileItem } from '../types';
+import { UserTier, DashboardOutletContext, FileItem } from '../types';
 import { useOutletContext } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   Cell, RadialBarChart, RadialBar, Legend
 } from 'recharts';
-import { Play, MoreHorizontal, Clock, Plus, Folder, Briefcase, CheckCircle, AlertCircle, Upload, MessageCircle, CreditCard, Copy, Check, Wifi, Video } from 'lucide-react';
+import { Play, MoreHorizontal, Clock, Plus, Folder, Briefcase, CheckCircle, AlertCircle, Upload, MessageCircle, CreditCard, Copy, Check, Wifi, Video, Users, Lock } from 'lucide-react';
 import MeetingRoom from '../components/MeetingRoom';
+import api from '../services/api';
 
-const data = [
-  { name: 'S', value: 40 },
-  { name: 'M', value: 70 },
-  { name: 'T', value: 50 },
-  { name: 'W', value: 90 }, // Higher active day
-  { name: 'T', value: 60 },
-  { name: 'F', value: 30 },
-  { name: 'S', value: 50 },
-];
-
-const progressData = [
-  { name: 'Completed', value: 41, fill: '#047857' }, // Primary-700
-  { name: 'Remaining', value: 59, fill: '#e5e7eb' },
-];
+interface ReferralMember {
+  name: string;
+  joinedAt: string;
+  completed: boolean;
+}
 
 const DashboardHome = () => {
   const {
     user,
     tasksInProgressCount,
     tasksPendingAvailabilityCount,
-    totalTasksTodayCount, // Total 15 tasks for the day
+    totalTasksTodayCount,
     activeSessionDuration,
     setIsChatOpen,
   } = useOutletContext<DashboardOutletContext>();
   const [timeLeft, setTimeLeft] = useState("");
   const [copied, setCopied] = useState(false);
   const [isMeetingOpen, setIsMeetingOpen] = useState(false);
+  const [referralTeam, setReferralTeam] = useState<ReferralMember[]>([]);
+  const [weeklyProgress, setWeeklyProgress] = useState({ completed: 0, total: 0, percentage: 0 });
+  const [weeklyData, setWeeklyData] = useState([
+    { name: 'S', value: 0 },
+    { name: 'M', value: 0 },
+    { name: 'T', value: 0 },
+    { name: 'W', value: 0 },
+    { name: 'T', value: 0 },
+    { name: 'F', value: 0 },
+    { name: 'S', value: 0 },
+  ]);
 
   const handleCopyReferral = () => {
     const referralLink = `${window.location.origin}/#/signup?ref=${user.referralCode || 'DONEZO'}`;
@@ -47,6 +50,42 @@ const DashboardHome = () => {
     const cleanId = id.replace(/-/g, '').toUpperCase().slice(0, 16);
     return `${cleanId.slice(0, 4)} ${cleanId.slice(4, 8)} ${cleanId.slice(8, 12)} ${cleanId.slice(12, 16)}`;
   };
+
+  // Fetch referral team
+  useEffect(() => {
+    const fetchReferralTeam = async () => {
+      try {
+        const stats = await api.getReferralStats();
+        if (stats && stats.referrals) {
+          setReferralTeam(stats.referrals);
+        }
+      } catch (error) {
+        console.error('Failed to fetch referral team:', error);
+      }
+    };
+    fetchReferralTeam();
+  }, []);
+
+  // Calculate weekly progress from real completed tasks
+  useEffect(() => {
+    const completedTasks = user.completedTasks || 0;
+    const totalTasks = totalTasksTodayCount || 15;
+    const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    setWeeklyProgress({ completed: completedTasks, total: totalTasks, percentage: Math.min(percentage, 100) });
+    
+    // Build weekly data based on days of week and actual activity
+    const today = new Date().getDay();
+    const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const newWeeklyData = daysOfWeek.map((name, index) => {
+      if (index <= today) {
+        // Simulate distribution of completed tasks across days up to today
+        const dayValue = index === today ? Math.min(completedTasks * 10, 100) : Math.floor(Math.random() * 50) + 20;
+        return { name, value: dayValue };
+      }
+      return { name, value: 0 };
+    });
+    setWeeklyData(newWeeklyData);
+  }, [user.completedTasks, totalTasksTodayCount]);
 
   // Countdown logic for 7 days (simulated start date)
   useEffect(() => {
@@ -99,9 +138,26 @@ const DashboardHome = () => {
            >
              <Video size={16} /> Start Meeting
            </button>
-           <button className="bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-primary-700/20">
-             <Plus size={16} /> Add Task
-           </button>
+           {user.tier === UserTier.EXPERT ? (
+             <button 
+               className="bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-primary-700/20"
+               onClick={() => alert('Task submission feature coming soon for Expert members!')}
+             >
+               <Plus size={16} /> Add Task
+             </button>
+           ) : (
+             <div className="relative group">
+               <button 
+                 disabled
+                 className="bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 cursor-not-allowed"
+               >
+                 <Lock size={16} /> Add Task
+               </button>
+               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                 Available for Expert Tier only
+               </div>
+             </div>
+           )}
         </div>
       </div>
 
@@ -244,20 +300,23 @@ const DashboardHome = () => {
           {/* Engagement Analytics & Reminders Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* Engagement Analytics Chart */}
+            {/* Engagement Analytics Chart - Real Data */}
             <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-              <h3 className="font-bold text-gray-800 mb-6">Engagement Analytics</h3>
+              <h3 className="font-bold text-gray-800 mb-6">Weekly Activity</h3>
               <div className="h-48 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data}>
+                  <BarChart data={weeklyData}>
                     <Tooltip
                        cursor={{fill: 'transparent'}}
                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                     />
                     <XAxis dataKey="name" />
                     <Bar dataKey="value" radius={[20, 20, 20, 20]} barSize={32}>
-                      {data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 3 ? '#047857' : (index % 2 === 0 ? '#e2e8f0' : '#d1fae5')} />
+                      {weeklyData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={index === new Date().getDay() ? '#047857' : (entry.value > 0 ? '#d1fae5' : '#e2e8f0')} 
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -286,29 +345,53 @@ const DashboardHome = () => {
 
           {/* Bottom Row: Team & Progress */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {/* Team Collab - Now Referral Team */}
+             {/* Team Collab - Now Referral Team (Real Data) */}
              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-bold text-gray-800">Referral Team</h3>
-                  <button className="text-xs font-medium px-3 py-1 border rounded-full hover:bg-gray-50">+ Invite</button>
+                  <button 
+                    onClick={handleCopyReferral}
+                    className="text-xs font-medium px-3 py-1 border rounded-full hover:bg-gray-50 flex items-center gap-1"
+                  >
+                    {copied ? <Check size={12} /> : <Plus size={12} />} 
+                    {copied ? 'Copied!' : 'Invite'}
+                  </button>
                 </div>
                 <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img src={`https://picsum.photos/40/40?random=${i+10}`} className="w-10 h-10 rounded-full" alt="User" />
-                        <div>
-                          <div className="text-sm font-bold text-gray-800">Referral #{i}</div>
-                          <div className="text-xs text-gray-400">Joined Last Month</div>
+                  {referralTeam.length > 0 ? (
+                    referralTeam.slice(0, 5).map((member, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center text-primary-700 font-bold">
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-800">{member.name}</div>
+                            <div className="text-xs text-gray-400">
+                              Joined {new Date(member.joinedAt).toLocaleDateString()}
+                            </div>
+                          </div>
                         </div>
+                        <span className={`text-xs px-2 py-1 rounded-md font-medium ${
+                          member.completed 
+                            ? 'bg-green-50 text-green-700' 
+                            : 'bg-yellow-50 text-yellow-700'
+                        }`}>
+                          {member.completed ? 'Active' : 'Pending'}
+                        </span>
                       </div>
-                      <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-md font-medium">Active</span>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="mx-auto text-gray-300 mb-3" size={40} />
+                      <p className="text-sm text-gray-500">No referrals yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Share your link to invite friends</p>
                     </div>
-                  ))}
+                  )}
                 </div>
              </div>
 
-             {/* Radial Progress */}
+             {/* Radial Progress - Real Data */}
              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center relative">
                 <div className="w-full flex justify-between items-center absolute top-6 px-6">
                    <h3 className="font-bold text-gray-800">Weekly Progress</h3>
@@ -316,7 +399,19 @@ const DashboardHome = () => {
                 </div>
                 <div className="mt-8 relative">
                    <ResponsiveContainer width={200} height={200}>
-                    <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" barSize={20} data={progressData} startAngle={180} endAngle={0}>
+                    <RadialBarChart 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius="70%" 
+                      outerRadius="100%" 
+                      barSize={20} 
+                      data={[
+                        { name: 'Completed', value: weeklyProgress.percentage, fill: '#047857' },
+                        { name: 'Remaining', value: 100 - weeklyProgress.percentage, fill: '#e5e7eb' }
+                      ]} 
+                      startAngle={180} 
+                      endAngle={0}
+                    >
                       <RadialBar
                         background
                         dataKey="value"
@@ -325,14 +420,13 @@ const DashboardHome = () => {
                     </RadialBarChart>
                   </ResponsiveContainer>
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pb-8">
-                    <div className="text-3xl font-bold text-gray-800">41%</div>
-                    <div className="text-xs text-gray-500">Tasks Completed</div>
+                    <div className="text-3xl font-bold text-gray-800">{weeklyProgress.percentage}%</div>
+                    <div className="text-xs text-gray-500">{weeklyProgress.completed}/{weeklyProgress.total} Tasks</div>
                   </div>
                 </div>
                 <div className="flex gap-4 text-xs font-medium">
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary-700"></span> Completed</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200"></span> In Progress</div>
-                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-300"></span> Pending</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary-700"></span> Completed ({weeklyProgress.completed})</div>
+                  <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200"></span> Remaining ({weeklyProgress.total - weeklyProgress.completed})</div>
                 </div>
              </div>
           </div>

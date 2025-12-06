@@ -114,17 +114,39 @@ const Tasks = () => {
         </div>
       ))}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {(activeTab === 'Day' ? dayTasks : nightTasks).map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onStart={startTask}
-            onSubmit={handleSubmitTask}
-            onFail={failTask}
-          />
-        ))}
-      </div>
+      {tasks.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-3xl border border-gray-100">
+          <div className="mb-4">
+            <Clock size={48} className="mx-auto text-gray-300" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-700 mb-2">No Tasks Available</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Tasks are published by the admin. Please check back later for new opportunities.
+          </p>
+        </div>
+      ) : (activeTab === 'Day' ? dayTasks : nightTasks).length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-3xl border border-gray-100">
+          <div className="mb-4">
+            {activeTab === 'Day' ? <Sun size={48} className="mx-auto text-orange-200" /> : <Moon size={48} className="mx-auto text-blue-200" />}
+          </div>
+          <h3 className="text-xl font-bold text-gray-700 mb-2">No {activeTab} Tasks Available</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Switch to {activeTab === 'Day' ? 'Night' : 'Day'} tasks or check back later.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {(activeTab === 'Day' ? dayTasks : nightTasks).map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onStart={startTask}
+              onSubmit={handleSubmitTask}
+              onFail={failTask}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
