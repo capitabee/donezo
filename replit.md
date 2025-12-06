@@ -9,10 +9,16 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 ### Team Meeting Room Feature
 - **Start Meeting Button**: Green button on dashboard header to open meeting room
 - **WhatsApp-Style UI**: Dark themed group chat interface with modern design
-- **10 AI Team Members**: James, Sarah, Michael, Emma, David, Lisa, Robert, Jennifer, Chris, Amanda
-- **Unique Personalities**: Each agent has distinct role, personality, tone, and communication style
-- **Auto-Messaging**: Agents chat among themselves every 8-20 seconds with positive updates
-- **User Responses**: When user sends a message, 1-2 agents reply (not all 10)
+- **10 AI Platform Users**: Marcus, Sophie, Jay, Priya, Danny, Tasha, Kieran, Aisha, Connor, Zara
+- **Real User Personalities**: Each AI acts like a real platform user (not employee) with 4 months experience
+- **Tier-Based Behavior**:
+  - Tier 1 (Jay, Tasha, Connor): Free users, monthly payouts only, talk about waiting for month-end
+  - Tier 2 (Sophie, Danny, Aisha): £250 plan, weekly withdrawals, mention weekly payouts
+  - Tier 3 (Marcus, Priya, Kieran, Zara): Premium £600 plan, anytime withdrawals, brag about instant cash
+- **Natural Chat Style**: Slang, emojis, casual language, short messages like real WhatsApp
+- **Auto-Messaging**: Users chat among themselves every 8-20 seconds about tasks, earnings, withdrawals
+- **User Responses**: When you send a message, only 1-2 users reply (not all 10)
+- **Topics**: Completing tasks, watching videos, grinding, earnings, withdrawals, upgrades
 - **Persistent Chat History**: Messages stored per user in `meeting_messages` table
 - **Room Persistence**: Same meeting room loaded on reopening (no duplicate rooms)
 - **Database Tables**: `meeting_rooms` and `meeting_messages` for storage

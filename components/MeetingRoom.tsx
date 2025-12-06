@@ -5,7 +5,7 @@ import api from '../services/api';
 interface Agent {
   id: string;
   name: string;
-  role: string;
+  tier: number;
   avatar: string;
 }
 
@@ -25,29 +25,48 @@ interface MeetingRoomProps {
 }
 
 const agentColors: Record<string, string> = {
-  'agent_1': 'text-blue-600',
-  'agent_2': 'text-pink-600',
-  'agent_3': 'text-green-600',
-  'agent_4': 'text-orange-600',
-  'agent_5': 'text-purple-600',
-  'agent_6': 'text-teal-600',
-  'agent_7': 'text-indigo-600',
-  'agent_8': 'text-rose-600',
-  'agent_9': 'text-cyan-600',
-  'agent_10': 'text-amber-600',
+  'agent_1': 'text-purple-400',
+  'agent_2': 'text-pink-400',
+  'agent_3': 'text-green-400',
+  'agent_4': 'text-purple-400',
+  'agent_5': 'text-blue-400',
+  'agent_6': 'text-green-400',
+  'agent_7': 'text-purple-400',
+  'agent_8': 'text-pink-400',
+  'agent_9': 'text-green-400',
+  'agent_10': 'text-purple-400',
 };
 
 const agentAvatars: Record<string, string> = {
-  'agent_1': '👨‍💼',
-  'agent_2': '👩‍💻',
-  'agent_3': '🧑‍💼',
-  'agent_4': '👩‍🔧',
-  'agent_5': '👨‍💻',
-  'agent_6': '👩‍🏫',
-  'agent_7': '🧑‍🔧',
-  'agent_8': '👩‍💼',
-  'agent_9': '👨‍🎓',
-  'agent_10': '👩‍🎨',
+  'agent_1': '👨🏾',
+  'agent_2': '👩🏼',
+  'agent_3': '🧑🏻',
+  'agent_4': '👩🏽',
+  'agent_5': '👨🏼',
+  'agent_6': '👩🏿',
+  'agent_7': '👨🏻',
+  'agent_8': '🧕',
+  'agent_9': '👦🏼',
+  'agent_10': '👩🏻',
+};
+
+const agentTiers: Record<string, number> = {
+  'agent_1': 3,
+  'agent_2': 2,
+  'agent_3': 1,
+  'agent_4': 3,
+  'agent_5': 2,
+  'agent_6': 1,
+  'agent_7': 3,
+  'agent_8': 2,
+  'agent_9': 1,
+  'agent_10': 3,
+};
+
+const getTierBadge = (tier: number) => {
+  if (tier === 3) return { text: 'T3', bg: 'bg-purple-500', title: 'Tier 3 - Premium' };
+  if (tier === 2) return { text: 'T2', bg: 'bg-blue-500', title: 'Tier 2 - Weekly' };
+  return { text: 'T1', bg: 'bg-gray-500', title: 'Tier 1 - Free' };
 };
 
 const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) => {
@@ -229,21 +248,28 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
 
         {/* Participants Panel */}
         {showParticipants && (
-          <div className="bg-[#111b21] border-b border-gray-700 px-4 py-3 max-h-40 overflow-y-auto">
-            <p className="text-gray-400 text-xs uppercase font-semibold mb-2">Team Members</p>
+          <div className="bg-[#111b21] border-b border-gray-700 px-4 py-3 max-h-48 overflow-y-auto">
+            <p className="text-gray-400 text-xs uppercase font-semibold mb-2">Platform Users ({agents.length + 1} online)</p>
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center gap-2 text-sm">
                 <span className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs">👤</span>
                 <span className="text-white">{userName} (You)</span>
               </div>
-              {agents.map(agent => (
-                <div key={agent.id} className="flex items-center gap-2 text-sm">
-                  <span className="w-6 h-6 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-xs">
-                    {agentAvatars[agent.id]}
-                  </span>
-                  <span className="text-gray-300 truncate">{agent.name}</span>
-                </div>
-              ))}
+              {agents.map(agent => {
+                const tier = agentTiers[agent.id] || 1;
+                const badge = getTierBadge(tier);
+                return (
+                  <div key={agent.id} className="flex items-center gap-2 text-sm">
+                    <span className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-xs">
+                      {agentAvatars[agent.id]}
+                    </span>
+                    <span className="text-gray-300 truncate">{agent.name}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${badge.bg} text-white font-bold`} title={badge.title}>
+                      {badge.text}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -268,34 +294,42 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
               {/* System Message */}
               <div className="flex justify-center">
                 <div className="bg-[#182229] text-gray-400 text-xs px-3 py-1 rounded-lg">
-                  Welcome to the Team Meeting Room
+                  Welcome to Donezo Users Group Chat
                 </div>
               </div>
 
-              {messages.map((message, index) => (
-                <div
-                  key={message.id || index}
-                  className={`flex ${message.senderType === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+              {messages.map((message, index) => {
+                const tier = agentTiers[message.senderId] || 1;
+                const badge = getTierBadge(tier);
+                
+                return (
                   <div
-                    className={`max-w-[75%] rounded-lg px-3 py-2 shadow-sm ${
-                      message.senderType === 'user'
-                        ? 'bg-[#005c4b] text-white rounded-tr-none'
-                        : 'bg-[#202c33] text-white rounded-tl-none'
-                    }`}
+                    key={message.id || index}
+                    className={`flex ${message.senderType === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {message.senderType === 'agent' && (
-                      <div className={`text-xs font-semibold mb-1 ${agentColors[message.senderId] || 'text-green-400'}`}>
-                        {agentAvatars[message.senderId] || '👤'} {message.senderName}
+                    <div
+                      className={`max-w-[75%] rounded-lg px-3 py-2 shadow-sm ${
+                        message.senderType === 'user'
+                          ? 'bg-[#005c4b] text-white rounded-tr-none'
+                          : 'bg-[#202c33] text-white rounded-tl-none'
+                      }`}
+                    >
+                      {message.senderType === 'agent' && (
+                        <div className={`text-xs font-semibold mb-1 flex items-center gap-1.5 ${agentColors[message.senderId] || 'text-green-400'}`}>
+                          {agentAvatars[message.senderId] || '👤'} {message.senderName}
+                          <span className={`text-[8px] px-1 py-0.5 rounded ${badge.bg} text-white`}>
+                            {badge.text}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <div className="text-right mt-1">
+                        <span className="text-[10px] text-gray-400">{formatTime(message.timestamp)}</span>
                       </div>
-                    )}
-                    <p className="text-sm leading-relaxed">{message.content}</p>
-                    <div className="text-right mt-1">
-                      <span className="text-[10px] text-gray-400">{formatTime(message.timestamp)}</span>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </>
           )}
