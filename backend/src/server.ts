@@ -654,15 +654,13 @@ app.post('/api/meeting/join', authenticateToken, async (req: any, res) => {
     
     let messages = await meetingService.getMeetingMessages(roomId);
     
-    // If new room or no messages, initialize with some chat activity
+    // If new room or no messages, initialize with some casual chat activity (no greetings)
     if ((isNew || messages.length === 0) && agents.length > 0) {
       const initialMessages = await meetingService.initializeRoom(roomId);
       messages = initialMessages;
     }
     
-    // Generate welcome messages for the user (2-3 people say hi)
-    const welcomeMessages = await meetingService.generateUserWelcomeMessages(roomId, userName);
-    messages = [...messages, ...welcomeMessages];
+    // No welcome messages - just show existing chat naturally
     
     res.json({
       roomId,
