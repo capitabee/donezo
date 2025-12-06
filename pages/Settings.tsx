@@ -315,13 +315,6 @@ const Settings = () => {
                     <span className="font-medium text-green-600">Active</span>
                   </div>
                 </div>
-
-                <button 
-                  onClick={handleDisconnectUKBank}
-                  className="w-full mt-6 py-3 bg-white border border-red-200 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors relative z-10"
-                >
-                  Disconnect Bank
-                </button>
               </>
             ) : (
               <>
@@ -345,19 +338,6 @@ const Settings = () => {
                 </button>
               </>
             )}
-          </div>
-
-          {/* Danger Zone */}
-          <div className="bg-red-50 p-8 rounded-3xl border border-red-100">
-            <h3 className="text-red-800 font-bold mb-2 flex items-center gap-2">
-              <AlertTriangle size={18} /> Danger Zone
-            </h3>
-            <p className="text-red-600 text-xs mb-6">
-              Deleting your account will remove all earnings history and deactivate your mandate.
-            </p>
-            <button className="w-full py-3 bg-red-100 text-red-700 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors">
-              Delete Account
-            </button>
           </div>
 
         </div>
