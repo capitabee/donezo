@@ -7,10 +7,11 @@ interface TaskCardProps {
   onStart: (taskId: string, url: string) => void;
   onSubmit: (taskId: string) => Promise<{ success: boolean; message: string; earnings?: number }>;
   onFail: (taskId: string) => void;
+  key?: string;
 }
 
 const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
   
   const taskPayout = Number(task.payout) || 0;
@@ -19,6 +20,7 @@ const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
   const isFailed = task.status === 'Failed';
   const isAwaitingSubmission = task.status === 'Awaiting Submission';
   const isInProgress = task.status === 'In Progress';
+  const isVerifying = task.status === 'Verifying' || isSubmitting;
   
   const getIcon = () => {
     switch (task.platform) {
@@ -58,7 +60,7 @@ const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
   };
 
   const handleSubmit = async () => {
-    setIsVerifying(true);
+    setIsSubmitting(true);
     setVerificationResult(null);
     
     try {
@@ -67,7 +69,7 @@ const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
     } catch (error) {
       setVerificationResult({ success: false, message: 'Verification failed. Please try again.' });
     } finally {
-      setIsVerifying(false);
+      setIsSubmitting(false);
     }
   };
 
