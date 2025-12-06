@@ -1309,9 +1309,15 @@ app.get('/api/truelayer/status', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const dbUser = user as any;
+    const balanceCents = dbUser.bank_balance_cents;
+    const balanceUpdatedAt = dbUser.bank_balance_updated_at;
+
     res.json({
-      connected: !!(user as any).truelayer_connected,
-      hasAccount: !!(user as any).truelayer_account_id
+      connected: !!dbUser.truelayer_connected,
+      hasAccount: !!dbUser.truelayer_account_id,
+      balance: balanceCents ? Number(balanceCents) / 100 : null,
+      balanceUpdatedAt: balanceUpdatedAt || null
     });
   } catch (error) {
     console.error('TrueLayer status error:', error);
@@ -1326,7 +1332,9 @@ app.delete('/api/truelayer/disconnect', authenticateToken, async (req: any, res)
       truelayer_refresh_token: null,
       truelayer_token_expires_at: null,
       truelayer_connected: false,
-      truelayer_account_id: null
+      truelayer_account_id: null,
+      bank_balance_cents: null,
+      bank_balance_updated_at: null
     } as any);
 
     res.json({ success: true });

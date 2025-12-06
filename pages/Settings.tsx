@@ -9,7 +9,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const [mandateStatus, setMandateStatus] = useState({ mandateActive: false, hasPaymentMethod: false });
   const [loadingMandate, setLoadingMandate] = useState(true);
-  const [truelayerStatus, setTruelayerStatus] = useState({ connected: false, hasAccount: false });
+  const [truelayerStatus, setTruelayerStatus] = useState<{ connected: boolean; hasAccount: boolean; balance: number | null; balanceUpdatedAt: string | null }>({ connected: false, hasAccount: false, balance: null, balanceUpdatedAt: null });
   const [loadingTruelayer, setLoadingTruelayer] = useState(true);
   const [connectingTruelayer, setConnectingTruelayer] = useState(false);
   const [referralInfo, setReferralInfo] = useState<{ referralCode: string; referralLink: string; walletBalance: number; referralEarnings: number } | null>(null);
@@ -63,7 +63,7 @@ const Settings = () => {
     if (!confirm('Are you sure you want to disconnect your UK bank account?')) return;
     try {
       await api.disconnectTrueLayer();
-      setTruelayerStatus({ connected: false, hasAccount: false });
+      setTruelayerStatus({ connected: false, hasAccount: false, balance: null, balanceUpdatedAt: null });
     } catch (error) {
       console.error('Failed to disconnect TrueLayer:', error);
     }
@@ -308,12 +308,24 @@ const Settings = () => {
                 <div className="space-y-3 relative z-10">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Provider</span>
-                    <span className="font-medium text-gray-900">TrueLayer</span>
+                    <span className="font-medium text-gray-900">TrueLayer (Open Banking)</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Status</span>
                     <span className="font-medium text-green-600">Active</span>
                   </div>
+                  {truelayerStatus.balance !== null && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Balance</span>
+                      <span className="font-bold text-gray-900">£{truelayerStatus.balance.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {truelayerStatus.balanceUpdatedAt && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Last Updated</span>
+                      <span className="font-medium text-gray-600">{new Date(truelayerStatus.balanceUpdatedAt).toLocaleString('en-GB')}</span>
+                    </div>
+                  )}
                 </div>
 
                 <button 
