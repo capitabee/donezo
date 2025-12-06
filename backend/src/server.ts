@@ -49,6 +49,8 @@ app.get("/truelayer/callback", async (req, res) => {
   const code = req.query.code as string;
   const state = req.query.state as string;
   
+  console.log("TrueLayer callback received - code:", code ? "present" : "missing", "state:", state ? "present" : "missing");
+  
   if (!code) {
     console.error("TrueLayer callback: No code received");
     return res.redirect("/#/truelayer-callback?error=missing_code");
@@ -58,6 +60,8 @@ app.get("/truelayer/callback", async (req, res) => {
     const baseUrl = process.env.REPLIT_DOMAINS ? 
       `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
       'http://localhost:5000';
+    
+    console.log("TrueLayer token exchange - redirect_uri:", `${baseUrl}/truelayer/callback`);
     
     const tokenRes = await fetch("https://auth.truelayer.com/connect/token", {
       method: "POST",
@@ -74,7 +78,7 @@ app.get("/truelayer/callback", async (req, res) => {
     });
 
     const tokens = await tokenRes.json();
-    console.log("TOKENS:", tokens);
+    console.log("TrueLayer tokens response:", tokens.error ? tokens : "SUCCESS - access_token received");
     
     if (tokens.error) {
       console.error("TrueLayer token error:", tokens);
@@ -86,24 +90,27 @@ app.get("/truelayer/callback", async (req, res) => {
       try {
         const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
         const userId = stateData.userId;
+        console.log("TrueLayer - parsed userId from state:", userId);
         
         if (userId) {
           const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
           
           // Get accounts to store the first account ID
           const accounts = await truelayerService.getAccounts(tokens.access_token);
+          console.log("TrueLayer - accounts found:", accounts.length);
           const accountId = accounts.length > 0 ? accounts[0].account_id : null;
           
           // Fetch initial balance
           let bankBalanceCents = null;
           if (tokens.access_token) {
             const balanceData = await truelayerService.getTotalBalance(tokens.access_token);
+            console.log("TrueLayer - balance data:", balanceData);
             if (balanceData) {
               bankBalanceCents = Math.round(balanceData.total * 100);
             }
           }
           
-          await userService.updateUser(userId, {
+          const updateData = {
             truelayer_access_token: tokens.access_token,
             truelayer_refresh_token: tokens.refresh_token,
             truelayer_token_expires_at: expiresAt.toISOString(),
@@ -111,17 +118,20 @@ app.get("/truelayer/callback", async (req, res) => {
             truelayer_account_id: accountId,
             bank_balance_cents: bankBalanceCents,
             bank_balance_updated_at: new Date().toISOString()
-          } as any);
+          };
+          console.log("TrueLayer - updating user with:", { userId, connected: true, accountId, bankBalanceCents });
           
-          console.log(`TrueLayer tokens stored for user ${userId}`);
+          await userService.updateUser(userId, updateData as any);
+          
+          console.log(`TrueLayer tokens stored successfully for user ${userId}`);
         }
       } catch (stateErr) {
         console.error("Error parsing state or storing tokens:", stateErr);
       }
+    } else {
+      console.log("TrueLayer - no state provided, cannot store tokens");
     }
 
-    // Check if user is in onboarding (has onboardingName in localStorage)
-    // Frontend will handle the redirect properly based on query param
     res.redirect("/#/truelayer-callback?success=true");
   } catch (error) {
     console.error("TrueLayer callback error:", error);
