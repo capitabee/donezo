@@ -1,32 +1,45 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import api from '../services/api';
 
 const TrueLayerCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Connecting your bank...');
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
-    const handleCallback = () => {
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
+
+    const handleCallback = async () => {
       const success = searchParams.get('success');
       const error = searchParams.get('error');
+      
+      console.log('TrueLayerCallback - success:', success, 'error:', error);
+      console.log('TrueLayerCallback - token:', api.getToken() ? 'present' : 'missing');
 
       // Check if user was in onboarding flow
       const isOnboarding = localStorage.getItem('onboardingName');
+      const hasToken = api.getToken();
 
       if (success === 'true') {
         setStatus('success');
         setMessage('Your UK bank has been connected successfully!');
         
-        // Always redirect - user was logged in when they started the flow
-        if (isOnboarding) {
-          setTimeout(() => navigate('/onboarding?bank_connected=true', { replace: true }), 2000);
-        } else {
-          // Redirect to settings - they must have been logged in to initiate this
-          setTimeout(() => navigate('/dashboard/settings', { replace: true }), 2000);
-        }
+        // Redirect after showing success message
+        setTimeout(() => {
+          if (isOnboarding) {
+            navigate('/onboarding?bank_connected=true', { replace: true });
+          } else if (hasToken) {
+            navigate('/dashboard/settings', { replace: true });
+          } else {
+            // No token but success - user got logged out, send to signin
+            navigate('/signin', { replace: true });
+          }
+        }, 2000);
         return;
       }
 
@@ -43,32 +56,32 @@ const TrueLayerCallback = () => {
           'connection_failed': 'Failed to connect to your bank. Please try again.'
         };
         setMessage(errorMessages[error] || 'Bank connection failed. Please try again.');
+        
+        // On error, redirect after a delay
+        setTimeout(() => {
+          if (isOnboarding) {
+            navigate('/onboarding', { replace: true });
+          } else if (hasToken) {
+            navigate('/dashboard/settings', { replace: true });
+          } else {
+            navigate('/signin', { replace: true });
+          }
+        }, 3000);
         return;
       }
 
-      // No params yet - check if this is a fresh load and redirect appropriately
-      const hasParams = searchParams.toString().length > 0;
-      if (!hasParams) {
-        // Fresh page load without params - redirect to appropriate place
-        if (isOnboarding) {
-          navigate('/onboarding', { replace: true });
-        } else {
-          navigate('/dashboard/settings', { replace: true });
-        }
-        return;
+      // No success or error params - redirect appropriately
+      if (isOnboarding) {
+        navigate('/onboarding', { replace: true });
+      } else if (hasToken) {
+        navigate('/dashboard/settings', { replace: true });
+      } else {
+        navigate('/', { replace: true });
       }
-
-      // Has params but not success/error - wait for timeout
-      setTimeout(() => {
-        if (status === 'loading') {
-          setStatus('error');
-          setMessage('Connection timed out. Please try again.');
-        }
-      }, 10000);
     };
 
     handleCallback();
-  }, [searchParams, navigate, status]);
+  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
