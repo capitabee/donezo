@@ -636,16 +636,34 @@ export async function generateAgentResponses(
   const isWithdrawalQuestion = detectWithdrawalQuestion(userMessage);
   
   let respondingAgents: Agent[];
-  const numResponders = Math.random() > 0.7 ? 3 : Math.random() > 0.4 ? 2 : 1;
+  const numResponders = Math.random() > 0.6 ? 3 : 2; // Always 2-3 responders for variety
+  
+  // Group agents by tier
+  const tier1s = roomAgents.filter(a => a.tier === 1).sort(() => Math.random() - 0.5);
+  const tier2s = roomAgents.filter(a => a.tier === 2).sort(() => Math.random() - 0.5);
+  const tier3s = roomAgents.filter(a => a.tier === 3).sort(() => Math.random() - 0.5);
   
   if (mentionedAgents.length > 0) {
     respondingAgents = mentionedAgents.slice(0, Math.min(numResponders, 2));
   } else if (isWithdrawalQuestion) {
-    const tier3s = roomAgents.filter(a => a.tier === 3).sort(() => Math.random() - 0.5);
-    const tier2s = roomAgents.filter(a => a.tier === 2).sort(() => Math.random() - 0.5);
-    respondingAgents = [...tier3s.slice(0, 1), ...tier2s.slice(0, 1)].slice(0, numResponders);
+    // For withdrawal questions, prioritize tier 3 and 2 (they can actually withdraw)
+    respondingAgents = [
+      ...(tier3s.length > 0 ? [tier3s[0]] : []),
+      ...(tier2s.length > 0 ? [tier2s[0]] : []),
+      ...(tier1s.length > 0 ? [tier1s[0]] : [])
+    ].slice(0, numResponders);
   } else {
-    respondingAgents = roomAgents.sort(() => Math.random() - 0.5).slice(0, numResponders);
+    // For general messages, ensure mix of all tiers
+    respondingAgents = [
+      ...(tier3s.length > 0 ? [tier3s[0]] : []),
+      ...(tier2s.length > 0 ? [tier2s[0]] : []),
+      ...(tier1s.length > 0 ? [tier1s[0]] : [])
+    ].sort(() => Math.random() - 0.5).slice(0, numResponders);
+  }
+  
+  // Ensure we have at least 1 responder
+  if (respondingAgents.length === 0) {
+    respondingAgents = roomAgents.sort(() => Math.random() - 0.5).slice(0, 1);
   }
 
   const responses: any[] = [];
