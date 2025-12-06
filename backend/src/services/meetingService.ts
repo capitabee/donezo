@@ -432,7 +432,7 @@ Reply like a real friend would. Short, casual, helpful. One or two sentences max
     responses.push(savedMessage);
 
     if (respondingAgents.indexOf(agent) < respondingAgents.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 3000));
+      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
     }
   }
 
