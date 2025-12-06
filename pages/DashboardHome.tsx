@@ -5,7 +5,8 @@ import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   Cell, RadialBarChart, RadialBar, Legend
 } from 'recharts';
-import { Play, MoreHorizontal, Clock, Plus, Folder, Briefcase, CheckCircle, AlertCircle, Upload, MessageCircle, CreditCard, Copy, Check, Wifi } from 'lucide-react';
+import { Play, MoreHorizontal, Clock, Plus, Folder, Briefcase, CheckCircle, AlertCircle, Upload, MessageCircle, CreditCard, Copy, Check, Wifi, Video } from 'lucide-react';
+import MeetingRoom from '../components/MeetingRoom';
 
 const data = [
   { name: 'S', value: 40 },
@@ -33,6 +34,7 @@ const DashboardHome = () => {
   } = useOutletContext<DashboardOutletContext>();
   const [timeLeft, setTimeLeft] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isMeetingOpen, setIsMeetingOpen] = useState(false);
 
   const handleCopyReferral = () => {
     const referralLink = `${window.location.origin}/#/signup?ref=${user.referralCode || 'DONEZO'}`;
@@ -91,6 +93,12 @@ const DashboardHome = () => {
             <Clock size={16} />
             {timeLeft}
            </div>
+           <button 
+             onClick={() => setIsMeetingOpen(true)}
+             className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all shadow-lg shadow-green-600/20"
+           >
+             <Video size={16} /> Start Meeting
+           </button>
            <button className="bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-primary-700/20">
              <Plus size={16} /> Add Task
            </button>
@@ -378,6 +386,13 @@ const DashboardHome = () => {
         </div>
 
       </div>
+
+      {/* Meeting Room Modal */}
+      <MeetingRoom 
+        isOpen={isMeetingOpen} 
+        onClose={() => setIsMeetingOpen(false)} 
+        userName={user.name}
+      />
     </div>
   );
 };

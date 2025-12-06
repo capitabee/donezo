@@ -266,4 +266,4 @@ export async function initializeRoom(roomId: string): Promise<any[]> {
   return savedMessages;
 }
 
-export { Agent };
+export type { Agent };

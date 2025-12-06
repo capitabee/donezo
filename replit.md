@@ -6,6 +6,25 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 
 ## Recent Changes (December 6, 2024)
 
+### Team Meeting Room Feature
+- **Start Meeting Button**: Green button on dashboard header to open meeting room
+- **WhatsApp-Style UI**: Dark themed group chat interface with modern design
+- **10 AI Team Members**: James, Sarah, Michael, Emma, David, Lisa, Robert, Jennifer, Chris, Amanda
+- **Unique Personalities**: Each agent has distinct role, personality, tone, and communication style
+- **Auto-Messaging**: Agents chat among themselves every 8-20 seconds with positive updates
+- **User Responses**: When user sends a message, 1-2 agents reply (not all 10)
+- **Persistent Chat History**: Messages stored per user in `meeting_messages` table
+- **Room Persistence**: Same meeting room loaded on reopening (no duplicate rooms)
+- **Database Tables**: `meeting_rooms` and `meeting_messages` for storage
+- **Backend API**: `/api/meeting/join`, `/api/meeting/:roomId/message`, `/api/meeting/:roomId/auto-message`
+
+### Password Change Feature
+- **Settings Security Section**: Updated with functional password change form
+- **Current Password Verification**: Must enter current password to change
+- **Password Validation**: New password minimum 8 characters, must match confirmation
+- **Show/Hide Toggle**: Eye icons to reveal/hide password fields
+- **Auto Logout**: User logged out after successful password change
+
 ### TrueLayer Open Banking Upgrade
 - **Modern OAuth Flow**: Updated from mock provider to real UK Open Banking (`uk-ob-all`)
 - **Bank Selection Screen**: Users now see a list of real UK banks (Monzo, Barclays, Lloyds, etc.)

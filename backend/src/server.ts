@@ -25,6 +25,7 @@ import {
 import stripeService from './services/stripeService';
 import openaiService from './services/openaiService';
 import truelayerService from './services/truelayerService';
+import * as meetingService from './services/meetingService';
 
 const usePostgres = isPostgresConfigured() && !isSupabaseConfigured();
 console.log(`Database mode: ${usePostgres ? 'PostgreSQL' : isSupabaseConfigured() ? 'Supabase' : 'Mock/Fallback'}`);
@@ -639,6 +640,130 @@ app.get('/api/earnings/activity', authenticateToken, async (req: any, res) => {
     });
   } catch (error) {
     console.error('Get earnings activity error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Meeting Room API Routes
+app.post('/api/meeting/join', authenticateToken, async (req: any, res) => {
+  try {
+    const { roomId, isNew } = await meetingService.getOrCreateMeetingRoom(req.user.userId);
+    
+    let messages = await meetingService.getMeetingMessages(roomId);
+    
+    // If new room, initialize with welcome messages
+    if (isNew && messages.length === 0) {
+      const welcomeMessages = await meetingService.initializeRoom(roomId);
+      messages = welcomeMessages;
+    }
+    
+    res.json({
+      roomId,
+      isNew,
+      agents: meetingService.agents,
+      messages: messages.map(m => ({
+        id: m.id,
+        senderType: m.sender_type,
+        senderName: m.sender_name,
+        senderId: m.sender_id,
+        content: m.content,
+        timestamp: m.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Join meeting error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/meeting/:roomId/messages', authenticateToken, async (req: any, res) => {
+  try {
+    const { roomId } = req.params;
+    const messages = await meetingService.getMeetingMessages(roomId);
+    
+    res.json({
+      messages: messages.map(m => ({
+        id: m.id,
+        senderType: m.sender_type,
+        senderName: m.sender_name,
+        senderId: m.sender_id,
+        content: m.content,
+        timestamp: m.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Get meeting messages error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/meeting/:roomId/message', authenticateToken, async (req: any, res) => {
+  try {
+    const { roomId } = req.params;
+    const { content } = req.body;
+    const user = await userService.getUserById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Save user message
+    const userMessage = await meetingService.saveMessage(
+      roomId,
+      'user',
+      user.name,
+      req.user.userId,
+      content
+    );
+    
+    // Generate AI agent responses (1-2 agents will respond)
+    const agentResponses = await meetingService.generateAgentResponses(
+      roomId,
+      content,
+      user.name
+    );
+    
+    res.json({
+      userMessage: {
+        id: userMessage.id,
+        senderType: userMessage.sender_type,
+        senderName: userMessage.sender_name,
+        senderId: userMessage.sender_id,
+        content: userMessage.content,
+        timestamp: userMessage.created_at
+      },
+      agentResponses: agentResponses.map(m => ({
+        id: m.id,
+        senderType: m.sender_type,
+        senderName: m.sender_name,
+        senderId: m.sender_id,
+        content: m.content,
+        timestamp: m.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Send meeting message error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/meeting/:roomId/auto-message', authenticateToken, async (req: any, res) => {
+  try {
+    const { roomId } = req.params;
+    const message = await meetingService.generateAgentAutoMessage(roomId);
+    
+    res.json({
+      message: {
+        id: message.id,
+        senderType: message.sender_type,
+        senderName: message.sender_name,
+        senderId: message.sender_id,
+        content: message.content,
+        timestamp: message.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Auto message error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

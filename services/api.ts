@@ -162,6 +162,26 @@ class ApiService {
     return this.request('/chat/history');
   }
 
+  // Meeting Room API
+  async joinMeeting() {
+    return this.request('/meeting/join', { method: 'POST' });
+  }
+
+  async getMeetingMessages(roomId: string) {
+    return this.request(`/meeting/${roomId}/messages`);
+  }
+
+  async sendMeetingMessage(roomId: string, content: string) {
+    return this.request(`/meeting/${roomId}/message`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async getMeetingAutoMessage(roomId: string) {
+    return this.request(`/meeting/${roomId}/auto-message`, { method: 'POST' });
+  }
+
   async upgrade(tier: 'Professional' | 'Expert') {
     return this.request('/upgrade', {
       method: 'POST',
