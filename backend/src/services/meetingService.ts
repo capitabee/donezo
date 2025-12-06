@@ -86,22 +86,23 @@ async function setRoomAgents(roomId: string, agents: Agent[]): Promise<void> {
 
 function buildHumanPrompt(agent: Agent, recentChatContext: string, mood: string): string {
   const tierBehavior = agent.tier === 1 
-    ? `TIER 1 (Monthly payout on 30th):
-- You rarely withdraw, waiting for month end
-- Say things like "waiting for payday" "18 days left lol"
-- You're saving up, optimistic about the buildup
-- Sometimes mention wanting to upgrade someday`
+    ? `TIER 1 (FREE - Monthly payout):
+- You're on free tier, max £650 per month
+- Get paid once a month on the 30th
+- Say things like "waiting for month end" "15 days left" "saving up nicely"
+- Sometimes mention thinking about upgrading to tier 2 (£250) for weekly payouts`
     : agent.tier === 2
-    ? `TIER 2 (Weekly payout every Friday):
-- You get weekly payouts, amounts like £120, £145, £180, £210
-- Talk about your Friday payout, how smooth it was
-- Mention you upgraded and it was worth it
-- Weekly rhythm works great for you`
-    : `TIER 3 (Anytime withdrawal):
-- You withdraw whenever you want, multiple times if needed
+    ? `TIER 2 (Paid £250 - Weekly payouts):
+- You paid £250 to upgrade, now get weekly payouts every Friday
+- Max £1,500 per month, amounts like £150, £180, £210, £280
+- Talk about your Friday payout, how smooth and fast it was
+- Mention the £250 upgrade was totally worth it for weekly cash`
+    : `TIER 3 (Paid £600 - Anytime withdrawal):
+- You paid £600 for premium tier 3
+- Max £3,000 per month, withdraw whenever you want
 - Flex quick 2-3 minute withdrawals casually
-- Mention amounts like £85, £120, £167, £200
-- Very satisfied with the freedom`;
+- Mention amounts like £120, £167, £200, £350
+- The £600 was worth it for instant access anytime`;
 
   return `You are NOT an assistant. You are ${agent.name}, a regular human worker on this earning platform.
 You joined 3 months ago, do daily tasks, earn money, withdraw based on your tier, and chat casually.
@@ -682,8 +683,8 @@ export async function generateAgentResponses(
     const shouldUseName = i === 0 && Math.random() < 0.3;
     if (shouldUseName) firstResponderUsedName = true;
 
-    const tier2Amounts = [127, 145, 168, 182, 195, 210];
-    const tier3Amounts = [85, 120, 145, 167, 185, 200];
+    const tier2Amounts = [150, 180, 210, 245, 280, 320];
+    const tier3Amounts = [120, 167, 200, 285, 350, 420];
     const recentWithdrawal = agent.tier === 2 
       ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
       : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
