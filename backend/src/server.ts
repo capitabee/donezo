@@ -716,6 +716,9 @@ app.post('/api/meeting/:roomId/message', authenticateToken, async (req: any, res
       content
     );
     
+    // Wait 2-5 seconds before AI responds (feels more natural)
+    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+    
     // Generate AI agent responses (1-2 agents will respond)
     const agentResponses = await meetingService.generateAgentResponses(
       roomId,
