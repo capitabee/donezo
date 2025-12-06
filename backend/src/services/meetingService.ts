@@ -670,8 +670,8 @@ export async function generateAgentResponses(
       ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
       : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
 
-    // Add realistic delay before each response (2-5 seconds for first, 1-3 for others)
-    const delay = i === 0 ? 2000 + Math.random() * 3000 : 1000 + Math.random() * 2000;
+    // Add realistic delay: 15 seconds before first reply, 2-4 seconds between others
+    const delay = i === 0 ? 15000 : 2000 + Math.random() * 2000;
     await new Promise(resolve => setTimeout(resolve, delay));
 
     let responseContent: string;

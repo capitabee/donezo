@@ -59,7 +59,6 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoMessageIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -143,24 +142,32 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
   };
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !roomId || sending) return;
+    if (!inputMessage.trim() || !roomId) return;
     
-    setSending(true);
     const messageContent = inputMessage;
     setInputMessage('');
     
+    // Immediately show user's message on screen
+    const userMessage: Message = {
+      id: `temp_${Date.now()}`,
+      senderType: 'user',
+      senderName: userName,
+      senderId: 'user',
+      content: messageContent,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Then get AI replies in background (they come after delay from server)
     try {
       const response = await api.sendMeetingMessage(roomId, messageContent);
-      setMessages(prev => [
-        ...prev,
-        response.userMessage,
-        ...response.agentResponses
-      ]);
+      // Replace temp message with real one and add agent responses
+      setMessages(prev => {
+        const withoutTemp = prev.filter(m => m.id !== userMessage.id);
+        return [...withoutTemp, response.userMessage, ...response.agentResponses];
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
-      setInputMessage(messageContent);
-    } finally {
-      setSending(false);
     }
   };
 
@@ -331,21 +338,17 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type a message..."
-              disabled={loading || sending}
+              disabled={loading}
               className="w-full bg-[#2a3942] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none disabled:opacity-50"
             />
           </div>
           
           <button
             onClick={sendMessage}
-            disabled={!inputMessage.trim() || loading || sending}
+            disabled={!inputMessage.trim() || loading}
             className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00bf97] transition-colors"
           >
-            {sending ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <Send size={18} />
-            )}
+            <Send size={18} />
           </button>
         </div>
       </div>
