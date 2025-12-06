@@ -18,24 +18,10 @@ interface Message {
 }
 
 const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: `Hi ${user.name.split(' ')[0]}! I'm Sarah, your dedicated Team Leader. Welcome to the team!`,
-      sender: 'agent',
-      timestamp: '09:41 AM',
-      status: 'read'
-    },
-    {
-      id: '2',
-      text: 'If you have any questions about tasks, earnings, or upgrading your tier, feel free to ask me here.',
-      sender: 'agent',
-      timestamp: '09:41 AM',
-      status: 'read'
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -45,6 +31,51 @@ const ChatOverlay = ({ isOpen, onClose, user }: ChatOverlayProps) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && !historyLoaded) {
+      loadChatHistory();
+    }
+  }, [isOpen, historyLoaded]);
+
+  const loadChatHistory = async () => {
+    try {
+      const data = await api.getChatHistory();
+      if (data.messages && data.messages.length > 0) {
+        const loadedMessages: Message[] = data.messages.map((msg: any) => ({
+          id: msg.id,
+          text: msg.content,
+          sender: msg.role === 'user' ? 'user' : 'agent',
+          timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'read'
+        }));
+        setMessages(loadedMessages);
+      } else {
+        setMessages([
+          {
+            id: '1',
+            text: `Hi ${user.name.split(' ')[0]}! I'm Sarah, your Team Leader. How are the tasks going today?`,
+            sender: 'agent',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'read'
+          }
+        ]);
+      }
+      setHistoryLoaded(true);
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+      setMessages([
+        {
+          id: '1',
+          text: `Hi ${user.name.split(' ')[0]}! I'm Sarah, your Team Leader. What can I help you with?`,
+          sender: 'agent',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'read'
+        }
+      ]);
+      setHistoryLoaded(true);
+    }
+  };
 
   const handleSend = async () => {
     if (!inputText.trim()) return;

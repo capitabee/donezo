@@ -151,6 +151,10 @@ class ApiService {
     });
   }
 
+  async getChatHistory() {
+    return this.request('/chat/history');
+  }
+
   async upgrade(tier: 'Professional' | 'Expert') {
     return this.request('/upgrade', {
       method: 'POST',

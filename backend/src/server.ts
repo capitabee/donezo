@@ -412,6 +412,23 @@ app.get('/api/earnings', authenticateToken, async (req: any, res) => {
   }
 });
 
+app.get('/api/chat/history', authenticateToken, async (req: any, res) => {
+  try {
+    const history = await pgChatService.getChatHistory(req.user.userId, 50);
+    res.json({
+      messages: history.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Get chat history error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/api/chat', authenticateToken, async (req: any, res) => {
   try {
     const { message } = req.body;

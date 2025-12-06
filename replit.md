@@ -4,9 +4,28 @@
 
 Donezo is a comprehensive AI data annotation and task management platform that connects remote workers with AI training tasks. The platform features a tiered salary system, real-time task management, payment processing, and administrative controls. Users complete tasks on external platforms (YouTube, TikTok, Instagram) and earn payouts based on their tier level, with earnings capped at £650 (Basic), £1,500 (Professional), or £3,000 (Expert) monthly.
 
-## Recent Changes (December 5, 2024)
+## Recent Changes (December 6, 2024)
 
-### New Premium Authentication & Onboarding Flow
+### Chat Memory System & AI Improvements
+- **Persistent Chat Memory**: All conversations with Sarah (Team Leader AI) are now stored in `chat_messages` table
+- **Context-Aware Responses**: AI remembers previous conversations, user's task progress, and earnings
+- **Human-Like Personality**: Sarah acts as a real Team Leader, never reveals she's AI, promotes upgrades naturally
+- **Chat History Loading**: Frontend loads chat history from server when chat is opened
+- **User Context in AI**: Includes completed tasks, earnings, recent activity, and days remaining to upgrade
+
+### Earnings Activity Tracking
+- **Real Activity Data**: Earnings page shows actual completed tasks from database
+- **Combined Data Sources**: Pulls from both transactions and task completions
+- **Chart Data**: Built from real transaction history
+
+### Backend Improvements
+- **GET `/api/chat/history`**: Returns user's chat history from database
+- **GET `/api/earnings/activity`**: Returns recent task completions with details
+- **`chatWithMemory` Function**: Includes last 8 messages + user context for AI responses
+
+## Previous Changes (December 5, 2024)
+
+### Premium Authentication & Onboarding Flow
 - **Premium Sign Up Page**: Dark theme with two-step signup (personal info → password), password strength indicator, referral code support
 - **Premium Sign In Page**: Matching dark theme with remember me option and forgot password link
 - **Multi-Step Onboarding Flow**: 
