@@ -136,7 +136,7 @@ function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generateFallbackMessage(agent: Agent): string {
+function generateFallbackMessage(agent: Agent, isInteractive: boolean = false): string {
   const randomTasks = Math.floor(Math.random() * 45) + 12;
   const randomEarnings = Math.floor(Math.random() * 180) + 30;
   const tier2Amounts = [115, 127, 145, 168, 182, 195, 210, 227];
@@ -146,6 +146,25 @@ function generateFallbackMessage(agent: Agent): string {
     : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
 
   const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
+  
+  // Interactive messages that ask questions or engage the user
+  const interactiveMessages = [
+    `yo whos online rn? ${s}`,
+    `anyone else grinding today? 🔥`,
+    `${s} how many tasks yall done today?`,
+    `yo new people in here? welcome 👋`,
+    `${s} whos getting paid this week?`,
+    `hows everyone doing today?`,
+    `${s} anyone upgraded recently?`,
+    `whats good everyone`,
+    `${s} yall still grinding or taking a break?`,
+    `whos hit their target today? 💪`,
+    `${s} any newbies need help?`,
+    `how we all feeling today?`,
+    `${s} anyone else love this platform fr`,
+    `yo whos withdrawing today?`,
+    `${s} how long yall been on here?`
+  ];
   
   const tier1Messages = [
     `${s} just did ${randomTasks} tasks, cant wait for month end 💰`,
@@ -157,7 +176,10 @@ function generateFallbackMessage(agent: Agent): string {
     `anyone else counting down to payday? 😅`,
     `${s} this grind is real`,
     `coffee and tasks all day ${s}`,
-    `${randomTasks} done, taking 5 mins break`
+    `${randomTasks} done, taking 5 mins break`,
+    `${s} yo how many tasks u guys doing daily?`,
+    `man i cant wait to upgrade ${s}`,
+    `anyone on tier 1 like me? how u finding it?`
   ];
 
   const tier2Messages = [
@@ -170,7 +192,10 @@ function generateFallbackMessage(agent: Agent): string {
     `my friday payout was £${withdrawAmount}`,
     `grinding between breaks, ${randomTasks} tasks today`,
     `weekly rhythm is perfect ${s}`,
-    `${s} just hit ${randomTasks} tasks`
+    `${s} just hit ${randomTasks} tasks`,
+    `${s} yo anyone else on tier 2? the weekly payouts are 🔥`,
+    `just got my £${withdrawAmount} friday, love this ${s}`,
+    `who else upgraded to tier 2? best decision ${s}`
   ];
 
   const tier3Messages = [
@@ -180,14 +205,41 @@ function generateFallbackMessage(agent: Agent): string {
     `easy £${randomEarnings} this morning`,
     `${s} pulled another £${withdrawAmount}`,
     `${randomTasks} tasks smashed, might withdraw again`,
-    `${s} tier 3 is the move`,
+    `${s} tier 3 is the move fr`,
     `hit £${randomEarnings} today withdrew half already`,
     `${s} this instant withdrawal is 🔥`,
-    `just withdrew £${withdrawAmount} again ${s}`
+    `just withdrew £${withdrawAmount} again ${s}`,
+    `${s} yo tier 3 gang where u at`,
+    `anyone need proof withdrawals work? just got £${withdrawAmount} ${s}`,
+    `${s} been on tier 3 for 2 months now, no regrets`
   ];
+
+  // 40% chance of interactive message
+  if (isInteractive || Math.random() < 0.4) {
+    return interactiveMessages[Math.floor(Math.random() * interactiveMessages.length)];
+  }
 
   const messages = agent.tier === 1 ? tier1Messages : agent.tier === 2 ? tier2Messages : tier3Messages;
   return messages[Math.floor(Math.random() * messages.length)];
+}
+
+function generateWelcomeMessage(agent: Agent, userName: string): string {
+  const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
+  
+  const welcomes = [
+    `yo ${userName} welcome! ${s} 👋`,
+    `${s} ${userName} joined! whats good`,
+    `ayy ${userName}! welcome to the team ${s}`,
+    `${userName}! ${s} good to see u`,
+    `welcome ${userName} ${s} 🔥`,
+    `${s} yo ${userName} hows it going?`,
+    `${userName} in the building ${s}`,
+    `${s} ${userName}! u new here or been grinding?`,
+    `ayy ${userName} welcome ${s}`,
+    `${s} ${userName} whats good fam`
+  ];
+  
+  return welcomes[Math.floor(Math.random() * welcomes.length)];
 }
 
 function generateFallbackReply(agent: Agent, userMessage: string): string {
@@ -484,6 +536,27 @@ export async function initializeRoom(roomId: string): Promise<any[]> {
     await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 600));
   }
 
+  return savedMessages;
+}
+
+export async function generateUserWelcomeMessages(roomId: string, userName: string): Promise<any[]> {
+  const roomAgents = await getRoomAgents(roomId);
+  if (roomAgents.length === 0) return [];
+
+  // 2-3 agents will welcome the user
+  const numWelcomers = Math.floor(Math.random() * 2) + 2;
+  const welcomingAgents = roomAgents.sort(() => Math.random() - 0.5).slice(0, numWelcomers);
+  
+  const savedMessages: any[] = [];
+  
+  for (const agent of welcomingAgents) {
+    const welcomeMsg = generateWelcomeMessage(agent, userName);
+    const saved = await saveMessage(roomId, 'agent', agent.name, agent.id, welcomeMsg);
+    savedMessages.push(saved);
+    
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
+  }
+  
   return savedMessages;
 }
 

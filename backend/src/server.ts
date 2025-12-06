@@ -647,15 +647,22 @@ app.get('/api/earnings/activity', authenticateToken, async (req: any, res) => {
 // Meeting Room API Routes
 app.post('/api/meeting/join', authenticateToken, async (req: any, res) => {
   try {
+    const user = await userService.getUserById(req.user.userId);
+    const userName = user?.name || 'there';
+    
     const { roomId, isNew, agents } = await meetingService.getOrCreateMeetingRoom(req.user.userId);
     
     let messages = await meetingService.getMeetingMessages(roomId);
     
-    // If new room or no messages, initialize with welcome messages
+    // If new room or no messages, initialize with some chat activity
     if ((isNew || messages.length === 0) && agents.length > 0) {
-      const welcomeMessages = await meetingService.initializeRoom(roomId);
-      messages = welcomeMessages;
+      const initialMessages = await meetingService.initializeRoom(roomId);
+      messages = initialMessages;
     }
+    
+    // Generate welcome messages for the user (2-3 people say hi)
+    const welcomeMessages = await meetingService.generateUserWelcomeMessages(roomId, userName);
+    messages = [...messages, ...welcomeMessages];
     
     res.json({
       roomId,
