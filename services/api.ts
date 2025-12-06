@@ -270,8 +270,8 @@ class ApiService {
   }
 
   // TrueLayer UK Bank Connection
-  async getTrueLayerAuthUrl() {
-    return this.request('/truelayer/auth-url');
+  async getTrueLayerAuthUrl(isOnboarding: boolean = false) {
+    return this.request(`/truelayer/auth-url?isOnboarding=${isOnboarding}`);
   }
 
   async completeTrueLayerCallback(code: string, state: string) {

@@ -87,7 +87,7 @@ const Onboarding = () => {
     setError('');
     
     try {
-      const response = await api.getTrueLayerAuthUrl();
+      const response = await api.getTrueLayerAuthUrl(true); // true = isOnboarding
       if (response.authUrl) {
         window.location.href = response.authUrl;
       } else {

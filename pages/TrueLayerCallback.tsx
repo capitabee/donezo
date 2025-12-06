@@ -17,12 +17,13 @@ const TrueLayerCallback = () => {
     const handleCallback = async () => {
       const success = searchParams.get('success');
       const error = searchParams.get('error');
+      const onboardingParam = searchParams.get('onboarding');
       
-      console.log('TrueLayerCallback - success:', success, 'error:', error);
+      console.log('TrueLayerCallback - success:', success, 'error:', error, 'onboarding:', onboardingParam);
       console.log('TrueLayerCallback - token:', api.getToken() ? 'present' : 'missing');
 
-      // Check if user was in onboarding flow
-      const isOnboarding = localStorage.getItem('onboardingName');
+      // Check if user was in onboarding flow - from URL param (survives OAuth) or localStorage (fallback)
+      const isOnboarding = onboardingParam === 'true' || localStorage.getItem('onboardingName');
       const hasToken = api.getToken();
 
       if (success === 'true') {

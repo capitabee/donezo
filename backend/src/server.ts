@@ -86,11 +86,13 @@ app.get("/truelayer/callback", async (req, res) => {
     }
 
     // Store tokens in database if we have user context from state
+    let isOnboarding = false;
     if (state) {
       try {
         const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
         const userId = stateData.userId;
-        console.log("TrueLayer - parsed userId from state:", userId);
+        isOnboarding = stateData.isOnboarding || false;
+        console.log("TrueLayer - parsed state:", { userId, isOnboarding });
         
         if (userId) {
           const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
@@ -132,7 +134,11 @@ app.get("/truelayer/callback", async (req, res) => {
       console.log("TrueLayer - no state provided, cannot store tokens");
     }
 
-    res.redirect("/#/truelayer-callback?success=true");
+    // Redirect with isOnboarding flag so frontend knows where to go
+    const redirectUrl = isOnboarding 
+      ? "/#/truelayer-callback?success=true&onboarding=true" 
+      : "/#/truelayer-callback?success=true";
+    res.redirect(redirectUrl);
   } catch (error) {
     console.error("TrueLayer callback error:", error);
     res.redirect("/#/truelayer-callback?error=connection_failed");
@@ -1133,8 +1139,9 @@ app.get('/api/truelayer/auth-url', authenticateToken, async (req: any, res) => {
       'http://localhost:5000';
     // Use simple callback path
     const redirectUri = `${baseUrl}/truelayer/callback`;
-    // Include user ID in state for token storage
-    const state = Buffer.from(JSON.stringify({ userId: req.user.userId })).toString('base64');
+    // Include user ID and isOnboarding flag in state for token storage
+    const isOnboarding = req.query.isOnboarding === 'true';
+    const state = Buffer.from(JSON.stringify({ userId: req.user.userId, isOnboarding })).toString('base64');
     
     const authUrl = truelayerService.getAuthUrl(redirectUri, state);
     res.json({ authUrl });
