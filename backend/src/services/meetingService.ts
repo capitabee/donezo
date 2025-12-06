@@ -650,7 +650,13 @@ export async function generateAgentResponses(
   const tier3s = roomAgents.filter(a => a.tier === 3).sort(() => Math.random() - 0.5);
   
   if (mentionedAgents.length > 0) {
-    respondingAgents = mentionedAgents.slice(0, Math.min(numResponders, 2));
+    // When someone is mentioned by name, they MUST respond first
+    respondingAgents = mentionedAgents.slice(0, 2);
+    // Add 1 more random person for variety
+    const others = roomAgents.filter(a => !mentionedAgents.includes(a)).sort(() => Math.random() - 0.5);
+    if (others.length > 0 && respondingAgents.length < 2) {
+      respondingAgents.push(others[0]);
+    }
   } else if (isWithdrawalQuestion) {
     // For withdrawal questions, prioritize tier 3 and 2 (they can actually withdraw)
     respondingAgents = [
@@ -713,15 +719,23 @@ export async function generateAgentResponses(
             role: 'user',
             content: `Someone in chat asked: "${userMessage}"
 
-YOUR TIER INFO TO SHARE:
-${agent.tier === 1 ? '- You are FREE tier 1, max £650/month, paid monthly on 30th' : ''}
-${agent.tier === 2 ? '- You PAID £250 for tier 2, max £1500/month, weekly payouts on Friday, last withdrawal was £' + recentWithdrawal : ''}
-${agent.tier === 3 ? '- You PAID £600 for tier 3, max £3000/month, withdraw anytime, last withdrawal was £' + recentWithdrawal : ''}
+YOUR REAL STATS (use these when asked):
+${agent.tier === 1 ? `- FREE tier 1, max £650/month, paid monthly on 30th
+- Total earned so far: £${1200 + Math.floor(Math.random() * 600)} over 3 months
+- Thinking about upgrading to tier 2 soon` : ''}
+${agent.tier === 2 ? `- PAID £250 for tier 2, max £1500/month, weekly payouts Friday
+- Last withdrawal: £${recentWithdrawal}
+- Total earned so far: £${3200 + Math.floor(Math.random() * 1000)} over 3 months
+- The £250 upgrade paid itself back in first 2 weeks` : ''}
+${agent.tier === 3 ? `- PAID £600 for tier 3, max £3000/month, withdraw anytime
+- Last withdrawal: £${recentWithdrawal}
+- Total earned so far: £${6500 + Math.floor(Math.random() * 2000)} over 3 months
+- The £600 was 100% worth it, made it back in like 10 days` : ''}
 
-${wasMentioned ? 'They mentioned YOUR NAME - reply directly!' : ''}
+${wasMentioned ? 'IMPORTANT: They mentioned YOUR NAME directly - you MUST respond with YOUR story and numbers!' : ''}
 ${nameInstruction}
 
-ANSWER THEIR QUESTION DIRECTLY from your real experience. If they ask about paying £600, and you paid £600, say "yeah I paid £600" etc. Be honest and helpful like a real person sharing their story. 1-3 sentences, casual.`
+If they ask about earnings or how much you made, share your TOTAL earnings proudly. Be encouraging and real. 1-3 sentences, casual but helpful.`
           }
         ],
         max_tokens: 80,
