@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import api from '../services/api';
 
 const TrueLayerCallback = () => {
   const navigate = useNavigate();
@@ -14,21 +13,19 @@ const TrueLayerCallback = () => {
       const success = searchParams.get('success');
       const error = searchParams.get('error');
 
-      // Check if user has a valid session
-      const hasToken = api.getToken();
+      // Check if user was in onboarding flow
       const isOnboarding = localStorage.getItem('onboardingName');
 
       if (success === 'true') {
         setStatus('success');
         setMessage('Your UK bank has been connected successfully!');
         
+        // Always redirect - user was logged in when they started the flow
         if (isOnboarding) {
           setTimeout(() => navigate('/onboarding?bank_connected=true', { replace: true }), 2000);
-        } else if (hasToken) {
-          setTimeout(() => navigate('/dashboard/settings', { replace: true }), 2000);
         } else {
-          // No session - redirect to signin
-          setTimeout(() => navigate('/signin', { replace: true }), 2000);
+          // Redirect to settings - they must have been logged in to initiate this
+          setTimeout(() => navigate('/dashboard/settings', { replace: true }), 2000);
         }
         return;
       }
@@ -38,6 +35,7 @@ const TrueLayerCallback = () => {
         const errorMessages: Record<string, string> = {
           'cancelled': 'Bank connection was cancelled.',
           'missing_params': 'Missing authorization data. Please try again.',
+          'missing_code': 'No authorization code received. Please try again.',
           'invalid_state': 'Invalid session. Please try again.',
           'token_exchange_failed': 'Failed to connect to your bank. Please try again.',
           'server_error': 'Server error occurred. Please try again later.',
@@ -48,7 +46,19 @@ const TrueLayerCallback = () => {
         return;
       }
 
-      // No params yet - still loading/processing
+      // No params yet - check if this is a fresh load and redirect appropriately
+      const hasParams = searchParams.toString().length > 0;
+      if (!hasParams) {
+        // Fresh page load without params - redirect to appropriate place
+        if (isOnboarding) {
+          navigate('/onboarding', { replace: true });
+        } else {
+          navigate('/dashboard/settings', { replace: true });
+        }
+        return;
+      }
+
+      // Has params but not success/error - wait for timeout
       setTimeout(() => {
         if (status === 'loading') {
           setStatus('error');
