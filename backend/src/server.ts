@@ -298,16 +298,20 @@ app.post('/api/onboarding/complete', authenticateToken, async (req: any, res) =>
     if (referredBy) {
       const referrer = await userService.getUserByReferralCode(referredBy);
       if (referrer) {
+        // Add £50 to referrer's earnings and wallet
         await userService.updateUser(referrer.id, {
+          earnings: Number(referrer.earnings || 0) + 50,
           wallet_balance: Number((referrer as any).wallet_balance || 0) + 50,
           referral_earnings: Number((referrer as any).referral_earnings || 0) + 50
         } as any);
         
+        // Add £50 to new user's earnings and wallet
         await userService.updateUser(req.user.userId, {
+          earnings: Number(user.earnings || 0) + 50,
           wallet_balance: Number((user as any).wallet_balance || 0) + 50
         } as any);
         
-        console.log(`Referral bonus applied: ${referrer.email} and ${user.email} each received £50`);
+        console.log(`Referral bonus applied: ${referrer.email} and ${user.email} each received £50 in earnings`);
       }
     }
     
