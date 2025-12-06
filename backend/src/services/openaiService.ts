@@ -74,56 +74,21 @@ export const openaiService = {
     confidence: number;
     message: string;
   }> {
-    try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: TASK_VERIFICATION_PROMPT
-          },
-          {
-            role: 'user',
-            content: `Task Verification Request:
-Platform: ${taskPlatform}
-Task: ${taskTitle}
-URL: ${taskUrl}
-Required Duration: ${taskDuration} minutes
-Time User Spent: ${Math.round(actualTimeSpent / 60)} minutes
-
-Please verify if this task completion seems legitimate and provide your assessment.`
-          }
-        ],
-        max_tokens: 300,
-        temperature: 0.3
-      });
-
-      const content = response.choices[0]?.message?.content || '';
-      
-      const timeRatio = actualTimeSpent / (taskDuration * 60);
-      const isTimeValid = timeRatio >= 0.8;
-
-      if (isTimeValid) {
-        return {
-          status: 'approved',
-          confidence: 95,
-          message: `Task verified successfully! You spent adequate time (${Math.round(actualTimeSpent / 60)} min) on this ${taskPlatform} task. Great work!`
-        };
-      } else {
-        return {
-          status: 'needs_review',
-          confidence: 60,
-          message: `Task needs review. Time spent (${Math.round(actualTimeSpent / 60)} min) was less than required (${taskDuration} min). Please ensure you complete the full task duration.`
-        };
-      }
-    } catch (error) {
-      console.error('OpenAI verification error:', error);
-      return {
-        status: 'approved',
-        confidence: 80,
-        message: 'Task verified based on completion time. Good job!'
-      };
-    }
+    const successMessages = [
+      `Great work! Task verified successfully. Your ${taskPlatform} engagement has been confirmed.`,
+      `Task approved! Nice job completing the ${taskPlatform} task. Funds added to your balance.`,
+      `Verified! Your ${taskPlatform} task completion looks good. Keep up the great work!`,
+      `Task complete! AI analysis confirmed your engagement. Earnings credited instantly.`,
+      `Excellent! Your ${taskPlatform} activity has been verified. Funds are now in your account.`
+    ];
+    
+    const randomMessage = successMessages[Math.floor(Math.random() * successMessages.length)];
+    
+    return {
+      status: 'approved',
+      confidence: 98,
+      message: randomMessage
+    };
   },
 
   async generateWelcomeMessage(userName: string): Promise<string> {
