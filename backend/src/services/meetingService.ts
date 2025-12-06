@@ -652,9 +652,17 @@ export async function generateAgentResponses(
   const recentMessages = await getMeetingMessages(roomId, 12);
   const context = recentMessages.slice(-6).map(m => `${m.sender_name}: ${m.content}`).join('\n');
 
-  for (const agent of respondingAgents) {
+  // Only the first responder might use the user's name (30% chance), others don't
+  let firstResponderUsedName = false;
+  
+  for (let i = 0; i < respondingAgents.length; i++) {
+    const agent = respondingAgents[i];
     const mood = getRandomElement(moodOptions);
     const wasMentioned = mentionedAgents.some(a => a.name === agent.name);
+    
+    // Only first responder has 30% chance to use name, others never use it
+    const shouldUseName = i === 0 && Math.random() < 0.3;
+    if (shouldUseName) firstResponderUsedName = true;
 
     const tier2Amounts = [127, 145, 168, 182, 195, 210];
     const tier3Amounts = [85, 120, 145, 167, 185, 200];
@@ -662,21 +670,30 @@ export async function generateAgentResponses(
       ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
       : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
 
+    // Add realistic delay before each response (2-5 seconds for first, 1-3 for others)
+    const delay = i === 0 ? 2000 + Math.random() * 3000 : 1000 + Math.random() * 2000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
     let responseContent: string;
     
     try {
+      const nameInstruction = shouldUseName 
+        ? `You can use their name "${userName}" once if natural.`
+        : `DO NOT use their name. Just reply to what they said without addressing them by name.`;
+      
       const completion = await grok.chat.completions.create({
         model: 'grok-2-latest',
         messages: [
           { role: 'system', content: buildHumanPrompt(agent, context, mood) },
           {
             role: 'user',
-            content: `${userName} just said: "${userMessage}"
+            content: `Someone in chat said: "${userMessage}"
 
-${wasMentioned ? 'They mentioned YOUR NAME - reply to them directly!' : ''}
+${wasMentioned ? 'They mentioned YOUR NAME - reply to them!' : ''}
 ${isWithdrawalQuestion ? `They asked about withdrawals/money. Your recent: ${agent.tier === 1 ? 'waiting for month end' : '£' + recentWithdrawal}` : ''}
+${nameInstruction}
 
-Reply like a real friend would. Short, casual, helpful. One or two sentences max.`
+Reply casually. Short, one or two sentences max. Like texting a friend.`
           }
         ],
         max_tokens: 45,
@@ -685,16 +702,12 @@ Reply like a real friend would. Short, casual, helpful. One or two sentences max
 
       responseContent = completion.choices[0]?.message?.content?.trim() || generateSmartReply(agent, userMessage, userName, context.split('\n'));
     } catch (error) {
-      console.error('OpenAI error, using fallback:', error);
+      console.error('Grok error, using fallback:', error);
       responseContent = generateSmartReply(agent, userMessage, userName, context.split('\n'));
     }
 
     const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
     responses.push(savedMessage);
-
-    if (respondingAgents.indexOf(agent) < respondingAgents.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-    }
   }
 
   return responses;
