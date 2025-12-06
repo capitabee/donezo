@@ -136,6 +136,113 @@ function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function generateFallbackMessage(agent: Agent): string {
+  const randomTasks = Math.floor(Math.random() * 45) + 12;
+  const randomEarnings = Math.floor(Math.random() * 180) + 30;
+  const tier2Amounts = [115, 127, 145, 168, 182, 195, 210, 227];
+  const tier3Amounts = [67, 85, 95, 120, 145, 167, 185, 200];
+  const withdrawAmount = agent.tier === 2 
+    ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
+    : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
+
+  const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
+  
+  const tier1Messages = [
+    `${s} just did ${randomTasks} tasks, cant wait for month end 💰`,
+    `grinding today, ${randomTasks} done already 🔥`,
+    `watching these vids is easy money ${s}`,
+    `${randomTasks} tasks in, need a break`,
+    `${s} slowly building up my balance`,
+    `tired but ${randomTasks} tasks done today`,
+    `anyone else counting down to payday? 😅`,
+    `${s} this grind is real`,
+    `coffee and tasks all day ${s}`,
+    `${randomTasks} done, taking 5 mins break`
+  ];
+
+  const tier2Messages = [
+    `${s} weekly payout came through £${withdrawAmount} 💪`,
+    `just did ${randomTasks} tasks, friday cant come soon enough`,
+    `${s} love these weekly withdrawals`,
+    `£${randomEarnings} this week so far not bad`,
+    `${randomTasks} tasks done ${s}`,
+    `that upgrade was worth it ${s}`,
+    `my friday payout was £${withdrawAmount}`,
+    `grinding between breaks, ${randomTasks} tasks today`,
+    `weekly rhythm is perfect ${s}`,
+    `${s} just hit ${randomTasks} tasks`
+  ];
+
+  const tier3Messages = [
+    `${s} just withdrew £${withdrawAmount} took 2 mins`,
+    `${randomTasks} tasks today, already pulled £${withdrawAmount} 💰`,
+    `${s} love withdrawing whenever i want`,
+    `easy £${randomEarnings} this morning`,
+    `${s} pulled another £${withdrawAmount}`,
+    `${randomTasks} tasks smashed, might withdraw again`,
+    `${s} tier 3 is the move`,
+    `hit £${randomEarnings} today withdrew half already`,
+    `${s} this instant withdrawal is 🔥`,
+    `just withdrew £${withdrawAmount} again ${s}`
+  ];
+
+  const messages = agent.tier === 1 ? tier1Messages : agent.tier === 2 ? tier2Messages : tier3Messages;
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
+function generateFallbackReply(agent: Agent, userMessage: string): string {
+  const s = agent.slang[Math.floor(Math.random() * agent.slang.length)];
+  const randomTasks = Math.floor(Math.random() * 40) + 15;
+  const tier2Amounts = [127, 145, 168, 182, 195, 210];
+  const tier3Amounts = [85, 120, 145, 167, 185, 200];
+  const withdrawAmount = agent.tier === 2 
+    ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
+    : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
+
+  const lower = userMessage.toLowerCase();
+  
+  if (lower.includes('withdraw') || lower.includes('payout') || lower.includes('money') || lower.includes('paid')) {
+    if (agent.tier === 1) {
+      return getRandomElement([
+        `${s} still waiting for month end`,
+        `nah gotta wait til the 30th`,
+        `tier 1 life, counting down the days ${s}`,
+        `cant withdraw yet, but balance looking nice`,
+        `${s} payday soon tho`
+      ]);
+    } else if (agent.tier === 2) {
+      return getRandomElement([
+        `${s} got £${withdrawAmount} friday`,
+        `weekly payout came through smooth`,
+        `yeah £${withdrawAmount} last week ${s}`,
+        `friday payday is the best ${s}`,
+        `${s} weekly withdrawals hit different`
+      ]);
+    } else {
+      return getRandomElement([
+        `${s} just withdrew £${withdrawAmount} earlier`,
+        `yeah pulled £${withdrawAmount} this morning`,
+        `instant withdrawals are 🔥 ${s}`,
+        `withdrew £${withdrawAmount} took like 2 mins`,
+        `${s} anytime withdrawals are elite`
+      ]);
+    }
+  }
+
+  return getRandomElement([
+    `${s} same here`,
+    `nice one 👍`,
+    `${s} facts`,
+    `yeah bro ${s}`,
+    `${s} 💪`,
+    `real talk ${s}`,
+    `same ${s}`,
+    `${s} totally`,
+    `yep ${s}`,
+    `${s} true`
+  ]);
+}
+
 function detectMentionedAgents(message: string, agents: Agent[]): Agent[] {
   const lowerMessage = message.toLowerCase();
   return agents.filter(agent => lowerMessage.includes(agent.name.toLowerCase()));
@@ -223,6 +330,8 @@ export async function generateAgentAutoMessage(roomId: string): Promise<any> {
   
   const randomTasks = Math.floor(Math.random() * 45) + 15;
 
+  let messageContent: string;
+  
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -247,14 +356,13 @@ Keep it SHORT and REAL. One sentence, maybe two. Like a quick text to friends.`
       temperature: 1.1,
     });
 
-    const messageContent = completion.choices[0]?.message?.content?.trim();
-    if (!messageContent) throw new Error('Empty response');
-
-    return saveMessage(roomId, 'agent', randomAgent.name, randomAgent.id, messageContent);
+    messageContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(randomAgent);
   } catch (error) {
-    console.error('OpenAI error:', error);
-    throw error;
+    console.error('OpenAI error, using fallback:', error);
+    messageContent = generateFallbackMessage(randomAgent);
   }
+  
+  return saveMessage(roomId, 'agent', randomAgent.name, randomAgent.id, messageContent);
 }
 
 export async function generateAgentResponses(
@@ -293,6 +401,8 @@ export async function generateAgentResponses(
       ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
       : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
 
+    let responseContent: string;
+    
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -312,17 +422,17 @@ Reply like a real friend would. Short, casual, helpful. One or two sentences max
         temperature: 0.95,
       });
 
-      const responseContent = completion.choices[0]?.message?.content?.trim();
-      if (!responseContent) continue;
-
-      const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
-      responses.push(savedMessage);
-
-      if (respondingAgents.indexOf(agent) < respondingAgents.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 3000));
-      }
+      responseContent = completion.choices[0]?.message?.content?.trim() || generateFallbackReply(agent, userMessage);
     } catch (error) {
-      console.error('OpenAI error for', agent.name, error);
+      console.error('OpenAI error, using fallback:', error);
+      responseContent = generateFallbackReply(agent, userMessage);
+    }
+
+    const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
+    responses.push(savedMessage);
+
+    if (respondingAgents.indexOf(agent) < respondingAgents.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 3000));
     }
   }
 
@@ -344,6 +454,8 @@ export async function initializeRoom(roomId: string): Promise<any[]> {
     const hour = new Date().getHours();
     const timeContext = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
+    let messageContent: string;
+    
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -360,16 +472,16 @@ export async function initializeRoom(roomId: string): Promise<any[]> {
         temperature: 1.0,
       });
 
-      const messageContent = completion.choices[0]?.message?.content?.trim();
-      if (!messageContent) continue;
-
-      const saved = await saveMessage(roomId, 'agent', agent.name, agent.id, messageContent);
-      savedMessages.push(saved);
-      
-      await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 600));
+      messageContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(agent);
     } catch (error) {
-      console.error('Init error:', error);
+      console.error('Init error, using fallback:', error);
+      messageContent = generateFallbackMessage(agent);
     }
+
+    const saved = await saveMessage(roomId, 'agent', agent.name, agent.id, messageContent);
+    savedMessages.push(saved);
+    
+    await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 600));
   }
 
   return savedMessages;
