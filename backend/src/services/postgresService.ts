@@ -254,12 +254,27 @@ export const pgUserTaskService = {
   },
 
   async completeTask(userId: string, taskId: string, verificationResult: string, payout: number): Promise<DBUserTask | null> {
+    const existing = await pool.query(
+      'SELECT id FROM task_completions WHERE user_id = $1 AND task_id = $2',
+      [userId, taskId]
+    );
+
+    if (existing.rows[0]) {
+      const result = await pool.query(
+        `UPDATE task_completions 
+         SET status = 'completed', completed_at = CURRENT_TIMESTAMP, ai_verification_status = 'approved', ai_verification_message = $1, payout_amount = $2
+         WHERE user_id = $3 AND task_id = $4
+         RETURNING *`,
+        [verificationResult, payout, userId, taskId]
+      );
+      return result.rows[0] || null;
+    }
+
     const result = await pool.query(
-      `UPDATE task_completions 
-       SET status = 'completed', completed_at = CURRENT_TIMESTAMP, ai_verification_status = 'approved', ai_verification_message = $1, payout_amount = $2
-       WHERE user_id = $3 AND task_id = $4
+      `INSERT INTO task_completions (user_id, task_id, status, started_at, completed_at, ai_verification_status, ai_verification_message, payout_amount)
+       VALUES ($1, $2, 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'approved', $3, $4)
        RETURNING *`,
-      [verificationResult, payout, userId, taskId]
+      [userId, taskId, verificationResult, payout]
     );
     return result.rows[0] || null;
   },

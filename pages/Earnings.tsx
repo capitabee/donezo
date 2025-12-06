@@ -102,13 +102,7 @@ const Earnings = () => {
 
   const displayChartData = chartData.length > 0 ? chartData : defaultChartData;
 
-  const defaultTransactions = [
-    { id: 'TX-1042', date: new Date().toISOString(), description: 'Task completion earnings', amount: 0.80, status: 'completed', type: 'task_earning' },
-    { id: 'TX-1041', date: new Date(Date.now() - 86400000).toISOString(), description: 'Task completion earnings', amount: 0.25, status: 'completed', type: 'task_earning' },
-    { id: 'TX-1040', date: new Date(Date.now() - 172800000).toISOString(), description: 'Task completion earnings', amount: 0.20, status: 'completed', type: 'task_earning' },
-  ];
-
-  const displayTransactions = transactions.length > 0 ? transactions : defaultTransactions;
+  const displayTransactions = transactions;
 
   const getNextPayoutDate = () => {
     const now = new Date();
@@ -224,6 +218,14 @@ const Earnings = () => {
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader size={24} className="animate-spin text-gray-400" />
+            </div>
+          ) : displayTransactions.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                <Activity size={24} className="text-gray-400" />
+              </div>
+              <p className="text-gray-500 text-sm font-medium">No activity yet</p>
+              <p className="text-gray-400 text-xs mt-1">Complete tasks to see your earnings here</p>
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto pr-2 space-y-4">
