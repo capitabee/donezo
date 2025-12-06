@@ -1104,14 +1104,66 @@ app.post('/api/truelayer/oauth-callback', async (req, res) => {
   }
 });
 
-// Also handle GET for error cases (some OAuth providers redirect with GET on errors)
+// Handle GET for OAuth callback (response_mode: query)
 app.get('/api/truelayer/oauth-callback', async (req, res) => {
   const baseUrl = process.env.REPLIT_DOMAINS ? 
     `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
     'http://localhost:5000';
   
-  const error = req.query.error as string || 'cancelled';
-  res.redirect(`${baseUrl}/#/truelayer-callback?error=${encodeURIComponent(error)}`);
+  // Check for error from TrueLayer
+  const authError = req.query.error as string;
+  if (authError) {
+    return res.redirect(`${baseUrl}/#/truelayer-callback?error=${encodeURIComponent(authError)}`);
+  }
+  
+  // Get code and state from query params
+  const code = req.query.code as string;
+  const state = req.query.state as string;
+  
+  if (!code || !state) {
+    return res.redirect(`${baseUrl}/#/truelayer-callback?error=missing_params`);
+  }
+  
+  try {
+    // Decode state to get user ID
+    let userId: string;
+    try {
+      const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+      userId = stateData.userId;
+    } catch {
+      return res.redirect(`${baseUrl}/#/truelayer-callback?error=invalid_state`);
+    }
+    
+    const redirectUri = `${baseUrl}/api/truelayer/oauth-callback`;
+    
+    // Exchange code for tokens
+    const tokens = await truelayerService.exchangeCode(code, redirectUri);
+    if (!tokens) {
+      return res.redirect(`${baseUrl}/#/truelayer-callback?error=token_exchange_failed`);
+    }
+    
+    // Get accounts to store the first account ID
+    const accounts = await truelayerService.getAccounts(tokens.access_token);
+    const accountId = accounts.length > 0 ? accounts[0].account_id : null;
+    
+    // Calculate token expiry
+    const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
+    
+    // Update user with TrueLayer credentials
+    await userService.updateUser(userId, {
+      truelayer_access_token: tokens.access_token,
+      truelayer_refresh_token: tokens.refresh_token,
+      truelayer_token_expires_at: expiresAt.toISOString(),
+      truelayer_connected: true,
+      truelayer_account_id: accountId
+    } as any);
+    
+    // Redirect to frontend with success
+    res.redirect(`${baseUrl}/#/truelayer-callback?success=true`);
+  } catch (error) {
+    console.error('TrueLayer GET callback error:', error);
+    res.redirect(`${baseUrl}/#/truelayer-callback?error=server_error`);
+  }
 });
 
 // Frontend callback endpoint for JSON API calls (for manual token exchange if needed)

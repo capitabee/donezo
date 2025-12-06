@@ -41,15 +41,16 @@ export const truelayerService = {
       redirect_uri: redirectUri,
       scope: scopes.join(' '),
       nonce: Date.now().toString(),
-      response_mode: 'form_post',
+      response_mode: 'query',
       state: state,
-      providers: 'mock'
+      providers: 'uk-ob-all'
     });
     
     console.log('TrueLayer Auth URL params:', {
       client_id: TRUELAYER_CLIENT_ID,
       redirect_uri: redirectUri,
-      scope: scopes.join(' ')
+      scope: scopes.join(' '),
+      providers: 'uk-ob-all'
     });
     
     return `${AUTH_URL}/?${params.toString()}`;

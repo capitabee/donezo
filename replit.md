@@ -6,6 +6,13 @@ Donezo is a comprehensive AI data annotation and task management platform that c
 
 ## Recent Changes (December 6, 2024)
 
+### TrueLayer Open Banking Upgrade
+- **Modern OAuth Flow**: Updated from mock provider to real UK Open Banking (`uk-ob-all`)
+- **Bank Selection Screen**: Users now see a list of real UK banks (Monzo, Barclays, Lloyds, etc.)
+- **Bank App/Website Auth**: Users authenticate directly with their bank, not via credentials
+- **Query Response Mode**: Changed from `form_post` to `query` for proper redirect handling
+- **GET Callback Handler**: Updated backend to handle OAuth codes via GET request
+
 ### Chat Memory System & AI Improvements
 - **Persistent Chat Memory**: All conversations with Sarah (Team Leader AI) are now stored in `chat_messages` table
 - **Context-Aware Responses**: AI remembers previous conversations, user's task progress, and earnings
