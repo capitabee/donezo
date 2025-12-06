@@ -51,7 +51,7 @@ app.get("/truelayer/callback", async (req, res) => {
   
   if (!code) {
     console.error("TrueLayer callback: No code received");
-    return res.redirect("/#/dashboard?bank=error");
+    return res.redirect("/#/truelayer-callback?error=missing_code");
   }
 
   try {
@@ -78,7 +78,7 @@ app.get("/truelayer/callback", async (req, res) => {
     
     if (tokens.error) {
       console.error("TrueLayer token error:", tokens);
-      return res.redirect("/#/dashboard?bank=error");
+      return res.redirect("/#/truelayer-callback?error=token_exchange_failed");
     }
 
     // Store tokens in database if we have user context from state
@@ -120,10 +120,12 @@ app.get("/truelayer/callback", async (req, res) => {
       }
     }
 
-    res.redirect("/#/dashboard?bank=connected");
+    // Check if user is in onboarding (has onboardingName in localStorage)
+    // Frontend will handle the redirect properly based on query param
+    res.redirect("/#/truelayer-callback?success=true");
   } catch (error) {
     console.error("TrueLayer callback error:", error);
-    res.redirect("/#/dashboard?bank=error");
+    res.redirect("/#/truelayer-callback?error=connection_failed");
   }
 });
 

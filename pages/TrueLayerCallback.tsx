@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import api from '../services/api';
 
 const TrueLayerCallback = () => {
   const navigate = useNavigate();
@@ -13,15 +14,21 @@ const TrueLayerCallback = () => {
       const success = searchParams.get('success');
       const error = searchParams.get('error');
 
+      // Check if user has a valid session
+      const hasToken = api.getToken();
+      const isOnboarding = localStorage.getItem('onboardingName');
+
       if (success === 'true') {
         setStatus('success');
         setMessage('Your UK bank has been connected successfully!');
-        // Check if user is in onboarding flow
-        const isOnboarding = localStorage.getItem('onboardingName');
+        
         if (isOnboarding) {
-          setTimeout(() => navigate('/onboarding?bank_connected=true'), 2000);
+          setTimeout(() => navigate('/onboarding?bank_connected=true', { replace: true }), 2000);
+        } else if (hasToken) {
+          setTimeout(() => navigate('/dashboard/settings', { replace: true }), 2000);
         } else {
-          setTimeout(() => navigate('/dashboard/settings'), 2000);
+          // No session - redirect to signin
+          setTimeout(() => navigate('/signin', { replace: true }), 2000);
         }
         return;
       }
@@ -34,7 +41,8 @@ const TrueLayerCallback = () => {
           'invalid_state': 'Invalid session. Please try again.',
           'token_exchange_failed': 'Failed to connect to your bank. Please try again.',
           'server_error': 'Server error occurred. Please try again later.',
-          'access_denied': 'Access was denied. Please try again.'
+          'access_denied': 'Access was denied. Please try again.',
+          'connection_failed': 'Failed to connect to your bank. Please try again.'
         };
         setMessage(errorMessages[error] || 'Bank connection failed. Please try again.');
         return;
