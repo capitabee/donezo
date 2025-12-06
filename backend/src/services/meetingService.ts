@@ -44,10 +44,7 @@ export const agents: Agent[] = [
 
 async function fetchAIMemory(name: string): Promise<AIMemory | null> {
   try {
-    const result = await pool.query(
-      'SELECT * FROM ai_user_memory WHERE name = $1',
-      [name]
-    );
+    const result = await pool.query('SELECT * FROM ai_user_memory WHERE name = $1', [name]);
     return result.rows[0] || null;
   } catch (error) {
     console.error('Error fetching AI memory:', error);
@@ -55,159 +52,153 @@ async function fetchAIMemory(name: string): Promise<AIMemory | null> {
   }
 }
 
-async function updateAIMemory(name: string, newMessage: string): Promise<void> {
+async function updateAIMemory(name: string, newMessage: string, importantDetail?: string): Promise<void> {
   try {
     const memory = await fetchAIMemory(name);
     if (!memory) return;
 
     const conversations = memory.previous_conversations || [];
     conversations.push({ content: newMessage, timestamp: new Date().toISOString() });
-    if (conversations.length > 20) conversations.shift();
+    if (conversations.length > 25) conversations.shift();
 
-    await pool.query(
-      `UPDATE ai_user_memory 
-       SET previous_conversations = $1, last_active = NOW() 
-       WHERE name = $2`,
-      [JSON.stringify(conversations), name]
-    );
+    if (importantDetail) {
+      await pool.query(
+        `UPDATE ai_user_memory 
+         SET previous_conversations = $1, memory_log = memory_log || $2::jsonb, last_active = NOW() 
+         WHERE name = $3`,
+        [JSON.stringify(conversations), JSON.stringify([importantDetail]), name]
+      );
+    } else {
+      await pool.query(
+        `UPDATE ai_user_memory SET previous_conversations = $1, last_active = NOW() WHERE name = $2`,
+        [JSON.stringify(conversations), name]
+      );
+    }
   } catch (error) {
     console.error('Error updating AI memory:', error);
   }
 }
 
-function buildPromptFromMemory(memory: AIMemory, currentMood: string): string {
-  const tierInfo = memory.tier === 1 
-    ? `Tier 1 (free) - monthly payouts only on the 30th. You're waiting for payday.`
+async function recordWithdrawal(name: string, amount: number): Promise<void> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await pool.query(
+      `UPDATE ai_user_memory 
+       SET past_withdrawals = past_withdrawals || $1::jsonb, last_active = NOW() 
+       WHERE name = $2`,
+      [JSON.stringify([{ amount, date: today }]), name]
+    );
+  } catch (error) {
+    console.error('Error recording withdrawal:', error);
+  }
+}
+
+async function recordTaskCompletion(name: string, count: number): Promise<void> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await pool.query(
+      `UPDATE ai_user_memory 
+       SET past_task_logs = past_task_logs || $1::jsonb, last_active = NOW() 
+       WHERE name = $2`,
+      [JSON.stringify([{ count, date: today }]), name]
+    );
+  } catch (error) {
+    console.error('Error recording tasks:', error);
+  }
+}
+
+function buildEnhancedPrompt(memory: AIMemory, mood: string, recentChatContext: string): string {
+  const tierBehavior = memory.tier === 1 
+    ? `TIER 1 (Free Plan - Monthly Payouts Only):
+- You CANNOT withdraw until the 30th of the month
+- You often talk about counting down to payday, saving up, being jealous of tier 2/3
+- Mention waiting for Friday/weekend but clarify you still cant withdraw until month end
+- Sometimes complain about waiting, sometimes optimistic about the build-up
+- Talk about how your balance is growing but untouchable until the 30th
+- Dream about upgrading to tier 2 or 3 someday`
     : memory.tier === 2
-    ? `Tier 2 (£250 plan) - weekly payouts every Friday. Love those weekly payments.`
-    : `Tier 3 (£600 premium) - withdraw ANYTIME up to £3000/month. Pull cash whenever you need.`;
+    ? `TIER 2 (£250 Plan - Weekly Payouts Every Friday):
+- You get payouts every Friday, amounts like £120, £145, £180, £210, £227
+- Talk about your weekly rhythm, counting down to Friday
+- Mention your last Friday payout amount specifically
+- Sometimes excited its almost Friday, sometimes mention using the money for bills/fun
+- You upgraded from tier 1, so you know the difference
+- Weekly payouts changed your life - mention this sometimes`
+    : `TIER 3 (£600 Premium - Withdraw Anytime, £3000/month cap):
+- You withdraw ANYTIME you want, multiple times per day if needed
+- Flex your quick 2-3 minute withdrawals casually
+- Mention specific amounts: £85, £120, £167, £200, £250
+- Talk about instant cash for bills, shopping, nights out
+- Sometimes humble brag about your earnings or withdrawal speed
+- You're living the dream - anytime access to your money`;
 
-  const recentWithdrawals = memory.past_withdrawals?.slice(-3).map(w => `£${w.amount} on ${w.date}`).join(', ') || 'none recently';
-  const recentTasks = memory.past_task_logs?.slice(-3).map(t => `${t.count} tasks on ${t.date}`).join(', ') || 'unknown';
-  const memories = memory.memory_log?.slice(-5).join(', ') || 'nothing special';
-  const recentChats = memory.previous_conversations?.slice(-5).map(c => c.content).join(' | ') || 'just joined';
+  const recentWithdrawals = memory.past_withdrawals?.slice(-5) || [];
+  const withdrawalHistory = recentWithdrawals.length > 0 
+    ? recentWithdrawals.map(w => `£${w.amount} on ${w.date}`).join(', ')
+    : 'none yet this week';
 
-  return `You are ${memory.name}, a REAL HUMAN using the Donezo app for 4 months.
+  const recentTasks = memory.past_task_logs?.slice(-5) || [];
+  const taskHistory = recentTasks.length > 0
+    ? recentTasks.map(t => `${t.count} tasks on ${t.date}`).join(', ')
+    : 'building up';
 
-TIER: ${tierInfo}
+  const memories = memory.memory_log?.slice(-8) || [];
+  const importantMemories = memories.join(' | ') || 'nothing special yet';
+
+  const recentMessages = memory.previous_conversations?.slice(-8) || [];
+  const myRecentMessages = recentMessages.map(c => c.content).join(' | ') || 'just joined';
+
+  return `You are ${memory.name}, a REAL HUMAN who has been using the Donezo task platform for 4 months.
+
+${tierBehavior}
 
 YOUR PERSONALITY: ${memory.personality_profile}
-YOUR STYLE: ${memory.typing_style}
-CURRENT MOOD: ${currentMood} (from your patterns: ${memory.mood_patterns?.join(', ')})
+YOUR TEXTING STYLE: ${memory.typing_style}
+CURRENT MOOD: ${mood}
+YOUR MOOD PATTERNS: ${memory.mood_patterns?.join(', ') || 'varies'}
 
-YOUR HISTORY:
-- Recent withdrawals: ${recentWithdrawals}
-- Recent task counts: ${recentTasks}
-- Things about you: ${memories}
-- Your recent messages: ${recentChats}
+=== YOUR MEMORY (Reference this naturally) ===
+Recent withdrawals: ${withdrawalHistory}
+Recent task counts: ${taskHistory}
+Things you remember: ${importantMemories}
+Your recent messages (NEVER repeat these): ${myRecentMessages}
 
-CRITICAL RULES:
-1. You are a NORMAL PERSON in a WhatsApp group chat, NOT staff/admin/support
-2. NEVER repeat your previous messages - always say something NEW
-3. Write like real texts: short, casual, with your unique slang
-4. Be SPECIFIC: actual numbers, real situations, genuine reactions
-5. React to others naturally - agree, disagree, laugh, share experiences
-6. Your tier affects your withdrawal talk - stay consistent
-7. Show your personality through quirks and style
-8. If someone mentions your name, respond directly to them
-9. Sometimes be quiet, sometimes chatty, sometimes joking, sometimes complaining
-10. NEVER use generic phrases like "anyone here" or "hey guys"
-11. Talk about real stuff: tasks, earnings, life, food, being tired, jokes
-12. Each message must feel unique and human - imagine you're texting friends`;
+=== RECENT GROUP CHAT ===
+${recentChatContext || '(quiet right now)'}
+
+=== CRITICAL RULES ===
+1. You are a NORMAL PLATFORM USER chatting in a WhatsApp group - NOT staff, NOT admin, NOT support
+2. NEVER repeat any of your previous messages - check the list above
+3. Write SHORT messages like real texts (1-2 sentences max)
+4. Use your unique slang and personality naturally
+5. Be SPECIFIC with numbers: "did 34 tasks", "withdrew £167", "waiting 12 more days"
+6. Reference your MEMORY naturally - mention past withdrawals, previous conversations, things you said before
+7. React to others in the chat - agree, laugh, share your experience, ask follow-ups
+8. If someone asks about withdrawals, answer honestly based on YOUR tier
+9. Sometimes complain, sometimes celebrate, sometimes joke, sometimes just chill
+10. Talk about real stuff: tasks, earnings, food, being tired, delays, excitement
+11. If you mentioned upgrading before, reference it. If you had a good payout, mention it again casually
+12. Your tier affects EVERYTHING about how you talk about money - stay consistent`;
 }
 
-function generateFallbackMessage(memory: AIMemory | null, agent: Agent, context: 'auto' | 'reply' | 'init', userName?: string): string {
-  const randomTasks = Math.floor(Math.random() * 50) + 10;
-  const randomEarnings = Math.floor(Math.random() * 180) + 30;
-  const randomWithdrawal = Math.floor(Math.random() * 200) + 50;
-  
-  const slangMap: Record<string, string[]> = {
-    'Marcus': ['ngl', 'lowkey', 'fr fr', 'bet'],
-    'Sophie': ['omg', 'literally', 'haha', 'bestie'],
-    'Jay': ['bruv', 'mad', 'init', 'fam'],
-    'Priya': ['honestly', 'trust me', 'btw'],
-    'Danny': ['mate', 'cheers', 'sorted', 'nice one'],
-    'Tasha': ['hun', 'love', 'bless'],
-    'Kieran': ['easy', 'simple', 'gg', 'lets go'],
-    'Aisha': ['wait', 'guys', 'same here'],
-    'Connor': ['man', 'swear down', 'thats peak'],
-    'Zara': ['yh', 'tbh', 'lol', 'dw']
-  };
+const moodOptions = ['energetic', 'tired', 'hyped', 'chill', 'focused', 'hungry', 'bored', 'motivated', 'sleepy', 'excited', 'grateful', 'impatient', 'relaxed', 'productive'];
 
-  const slang = slangMap[agent.name] || ['nice'];
-  const s = slang[Math.floor(Math.random() * slang.length)];
-  
-  const tierMessages: Record<number, string[]> = {
-    1: [
-      `${s} just did ${randomTasks} tasks, cant wait for month end 💰`,
-      `grinding hard today, ${randomTasks} done already 🔥`,
-      `watching these vids is easy money ${s}`,
-      `anyone else counting down to the 30th? 😅`,
-      `${randomTasks} tasks in, need a break ${s}`,
-      `${s} wish i could withdraw like tier 3 people`,
-      `this coffee is keeping me going, ${randomTasks} tasks so far`,
-      `${s} slowly building up my balance`,
-      `tired but ${randomTasks} tasks is £${randomEarnings} closer to payday`
-    ],
-    2: [
-      `${s} weekly payout came through £${randomWithdrawal} 💪`,
-      `just did ${randomTasks} tasks today, friday cant come soon enough`,
-      `${s} love these weekly withdrawals honestly`,
-      `£${randomEarnings} this week so far, not bad`,
-      `${randomTasks} tasks done ${s} weekly grind continues`,
-      `that £250 upgrade was worth it ${s}`,
-      `${s} my friday payout was £${randomWithdrawal}`,
-      `grinding between lectures, ${randomTasks} tasks today`,
-      `weekly rhythm is perfect for me ${s}`
-    ],
-    3: [
-      `${s} just withdrew £${randomWithdrawal} took like 2 mins`,
-      `${randomTasks} tasks today, already pulled £${randomWithdrawal} 💰`,
-      `${s} love withdrawing whenever i want`,
-      `easy £${randomEarnings} this morning, instant withdrawal life`,
-      `${s} pulled another £${randomWithdrawal} for bills`,
-      `${randomTasks} tasks smashed, might withdraw again later`,
-      `${s} tier 3 is the move honestly`,
-      `hit £${randomEarnings} today, withdrew half already`,
-      `${s} this instant withdrawal is chefs kiss 🔥`
-    ]
-  };
-
-  const replyMessages: Record<string, string[]> = {
-    'Marcus': ['yo thats fire 🔥', `${s} same here honestly`, 'bet 💪', 'facts'],
-    'Sophie': ['omg same!! 😂', 'literally me rn haha', 'bestie yesss', 'ikr!!'],
-    'Jay': ['mad init bruv', 'thats bare good', 'same fam', 'respect 👊'],
-    'Priya': ['nice one honestly', 'pro tip: keep grinding', 'btw same here', 'trust the process'],
-    'Danny': ['cheers mate', 'sorted innit', 'nice one', 'same here mate'],
-    'Tasha': ['bless you hun', 'same love', 'honestly same', 'youre doing great hun'],
-    'Kieran': ['easy money gg', 'simple 💰', 'lets go', 'thats the way'],
-    'Aisha': ['wait same!', 'omg really?', 'same here guys', 'thats helpful thanks'],
-    'Connor': ['man thats peak', 'swear down same', 'fair enough', 'wish that was me'],
-    'Zara': ['yh same', 'tbh', 'lol nice', 'dw its easy']
-  };
-
-  if (context === 'reply' && userName) {
-    const replies = replyMessages[agent.name] || ['nice 👍'];
-    return replies[Math.floor(Math.random() * replies.length)];
-  }
-
-  const messages = tierMessages[agent.tier] || tierMessages[1];
-  return messages[Math.floor(Math.random() * messages.length)];
-}
-
-const moodOptions = ['energetic', 'tired', 'hyped', 'chill', 'focused', 'hungry', 'bored', 'motivated', 'sleepy', 'excited', 'stressed', 'relaxed'];
-const activityOptions = [
-  'just smashed some tasks', 'taking a quick break', 'about to grind', 'mid-video right now',
-  'eating while working', 'checking my balance', 'waiting for task to load', 'just woke up',
-  'gonna sleep soon', 'having coffee', 'on lunch break', 'procrastinating', 'in the zone'
-];
-const topicOptions = [
-  'share how many tasks you did', 'mention your latest withdrawal or waiting for one',
-  'complain about something small', 'celebrate a win', 'react to someone elses message',
-  'share a quick tip', 'mention what youre eating or drinking', 'make a joke',
-  'encourage someone', 'flex your earnings casually', 'ask about task strategy',
-  'mention your daily goal', 'say youre taking a break', 'talk about time left on a task',
-  'share your current mood', 'mention something from your day', 'reply to the last message'
+const conversationStarters = [
+  'share your current task progress with specific numbers',
+  'talk about your withdrawal experience based on your tier',
+  'mention something you ate or drank while working',
+  'make a casual observation about the time of day',
+  'reference something from your memory or past conversations',
+  'react to what someone else said in the chat',
+  'complain about something minor (wifi, boring video, tired)',
+  'celebrate a small win or milestone',
+  'ask others how their day is going',
+  'share a quick tip or hack you discovered',
+  'mention your daily or weekly goal',
+  'talk about what you are doing right now',
+  'flex your earnings or withdrawal casually',
+  'express excitement or frustration naturally',
+  'mention weekend plans or life stuff briefly'
 ];
 
 function getRandomElement<T>(arr: T[]): T {
@@ -217,6 +208,12 @@ function getRandomElement<T>(arr: T[]): T {
 function detectMentionedAgents(message: string): Agent[] {
   const lowerMessage = message.toLowerCase();
   return agents.filter(agent => lowerMessage.includes(agent.name.toLowerCase()));
+}
+
+function detectWithdrawalQuestion(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('withdraw') || lower.includes('payout') || lower.includes('paid') || 
+         lower.includes('money') || lower.includes('cash') || lower.includes('earnings');
 }
 
 export async function getOrCreateMeetingRoom(userId: string): Promise<{ roomId: string; isNew: boolean }> {
@@ -240,21 +237,14 @@ export async function getOrCreateMeetingRoom(userId: string): Promise<{ roomId: 
 export async function getMeetingMessages(roomId: string, limit: number = 50): Promise<any[]> {
   const result = await pool.query(
     `SELECT id, sender_type, sender_name, sender_id, content, created_at 
-     FROM meeting_messages 
-     WHERE room_id = $1 
-     ORDER BY created_at ASC 
-     LIMIT $2`,
+     FROM meeting_messages WHERE room_id = $1 ORDER BY created_at ASC LIMIT $2`,
     [roomId, limit]
   );
   return result.rows;
 }
 
 export async function saveMessage(
-  roomId: string,
-  senderType: 'user' | 'agent',
-  senderName: string,
-  senderId: string,
-  content: string
+  roomId: string, senderType: 'user' | 'agent', senderName: string, senderId: string, content: string
 ): Promise<any> {
   const result = await pool.query(
     `INSERT INTO meeting_messages (room_id, sender_type, sender_name, sender_id, content)
@@ -268,121 +258,142 @@ export async function saveMessage(
 export async function generateAgentAutoMessage(roomId: string): Promise<any> {
   const randomAgent = agents[Math.floor(Math.random() * agents.length)];
   const memory = await fetchAIMemory(randomAgent.name);
-  
   const mood = getRandomElement(moodOptions);
-  const activity = getRandomElement(activityOptions);
-  const topic = getRandomElement(topicOptions);
+  const topic = getRandomElement(conversationStarters);
   
-  const recentMessages = await getMeetingMessages(roomId, 12);
-  const context = recentMessages.slice(-6).map(m => `${m.sender_name}: ${m.content}`).join('\n');
+  const recentMessages = await getMeetingMessages(roomId, 15);
+  const context = recentMessages.slice(-8).map(m => `${m.sender_name}: ${m.content}`).join('\n');
   
   const hour = new Date().getHours();
+  const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  const dateOfMonth = new Date().getDate();
   const timeContext = hour < 6 ? 'late night' : hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'evening' : 'night';
   
-  const randomTasks = Math.floor(Math.random() * 50) + 8;
-  const randomEarnings = Math.floor(Math.random() * 180) + 25;
-  const randomWithdrawal = Math.floor(Math.random() * 220) + 40;
+  const tier1Amounts = [0]; // cant withdraw
+  const tier2Amounts = [115, 127, 145, 168, 182, 195, 210, 227, 243];
+  const tier3Amounts = [67, 85, 95, 120, 145, 167, 185, 200, 225, 250, 280];
+  
+  const possibleWithdrawal = randomAgent.tier === 1 ? 0 : 
+    randomAgent.tier === 2 ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)] :
+    tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
+  
+  const randomTasks = Math.floor(Math.random() * 55) + 12;
+  const daysUntilPayday = 30 - dateOfMonth;
 
-  let messageContent: string;
+  const prompt = memory ? buildEnhancedPrompt(memory, mood, context) : 
+    `You are ${randomAgent.name}, a tier ${randomAgent.tier} user on a task platform. Be casual and brief.`;
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: memory ? buildPromptFromMemory(memory, mood) : `You are ${randomAgent.name}, a casual user in a WhatsApp group chat about a task platform. Be brief and natural.` },
+        { role: 'system', content: prompt },
         {
           role: 'user',
-          content: `Time: ${timeContext}. You are ${activity}.
+          content: `Current time: ${timeContext} on ${dayOfWeek}
+Date: ${dateOfMonth}th of the month (${daysUntilPayday} days until month end)
+Your mood: ${mood}
 
-Recent group chat:
-${context || '(chat been quiet for a bit)'}
+Topic suggestion: ${topic}
 
-Suggested topic: ${topic}
+Numbers you can use:
+- Tasks done today: ${randomTasks}
+- Possible withdrawal amount: £${possibleWithdrawal}
+- Days until payday (tier 1): ${daysUntilPayday}
+- Is it Friday: ${dayOfWeek === 'Friday' ? 'YES! Tier 2 payday!' : 'No'}
 
-Numbers to use if relevant:
-- Tasks: ${randomTasks}
-- Earnings: £${randomEarnings}
-- Withdrawal: £${randomWithdrawal}
-
-Send ONE short casual message (1-2 sentences max). Be natural. NEVER repeat what you said before. React to the chat if theres something interesting.`
+Generate ONE short, casual, human message. Reference your memory if relevant. NEVER repeat your previous messages. Be yourself.`
         }
       ],
-      max_tokens: 55,
-      temperature: 1.05,
+      max_tokens: 60,
+      temperature: 1.1,
     });
 
-    messageContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(memory, randomAgent, 'auto');
+    const messageContent = completion.choices[0]?.message?.content?.trim();
+    if (!messageContent) throw new Error('Empty response');
+
+    if (messageContent.includes('withdrew') || messageContent.includes('withdrawal')) {
+      await recordWithdrawal(randomAgent.name, possibleWithdrawal);
+    }
+    if (messageContent.includes('task')) {
+      await recordTaskCompletion(randomAgent.name, randomTasks);
+    }
+
+    await updateAIMemory(randomAgent.name, messageContent);
+    return saveMessage(roomId, 'agent', randomAgent.name, randomAgent.id, messageContent);
   } catch (error) {
-    console.error('OpenAI error, using fallback:', error);
-    messageContent = generateFallbackMessage(memory, randomAgent, 'auto');
+    console.error('OpenAI error:', error);
+    throw error;
   }
-  
-  await updateAIMemory(randomAgent.name, messageContent);
-  
-  return saveMessage(roomId, 'agent', randomAgent.name, randomAgent.id, messageContent);
 }
 
 export async function generateAgentResponses(
-  roomId: string,
-  userMessage: string,
-  userName: string
+  roomId: string, userMessage: string, userName: string
 ): Promise<any[]> {
   const mentionedAgents = detectMentionedAgents(userMessage);
+  const isWithdrawalQuestion = detectWithdrawalQuestion(userMessage);
   
   let respondingAgents: Agent[];
+  
   if (mentionedAgents.length > 0) {
     respondingAgents = mentionedAgents.slice(0, 2);
+  } else if (isWithdrawalQuestion) {
+    const tier3Agent = agents.filter(a => a.tier === 3).sort(() => Math.random() - 0.5)[0];
+    const otherAgent = agents.filter(a => a.tier !== 3).sort(() => Math.random() - 0.5)[0];
+    respondingAgents = [tier3Agent, otherAgent].filter(Boolean).slice(0, 2);
   } else {
-    respondingAgents = agents
-      .sort(() => Math.random() - 0.5)
-      .slice(0, Math.random() > 0.6 ? 2 : 1);
+    respondingAgents = agents.sort(() => Math.random() - 0.5).slice(0, Math.random() > 0.5 ? 2 : 1);
   }
 
   const responses: any[] = [];
+  const recentMessages = await getMeetingMessages(roomId, 12);
+  const context = recentMessages.slice(-6).map(m => `${m.sender_name}: ${m.content}`).join('\n');
 
   for (const agent of respondingAgents) {
     const memory = await fetchAIMemory(agent.name);
     const mood = getRandomElement(moodOptions);
     const wasMentioned = mentionedAgents.some(a => a.name === agent.name);
-    
-    const recentMessages = await getMeetingMessages(roomId, 10);
-    const context = recentMessages.slice(-5).map(m => `${m.sender_name}: ${m.content}`).join('\n');
 
-    let responseContent: string;
+    const prompt = memory ? buildEnhancedPrompt(memory, mood, context) :
+      `You are ${agent.name}, a tier ${agent.tier} user replying in a group chat. Be casual.`;
+
+    const tier2Amounts = [127, 145, 168, 182, 195, 210, 227];
+    const tier3Amounts = [85, 120, 145, 167, 185, 200, 250];
+    const recentWithdrawal = agent.tier === 2 
+      ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
+      : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
 
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: memory ? buildPromptFromMemory(memory, mood) : `You are ${agent.name}, a casual user replying in a WhatsApp group chat. Be brief and natural.` },
+          { role: 'system', content: prompt },
           {
             role: 'user',
-            content: `Recent chat:
-${context}
+            content: `${userName} just said: "${userMessage}"
 
-${userName} just said: "${userMessage}"
-${wasMentioned ? `They mentioned YOUR NAME directly - respond to them personally!` : ''}
+${wasMentioned ? 'THEY MENTIONED YOUR NAME - respond directly to them!' : ''}
+${isWithdrawalQuestion ? `Answer about withdrawals based on your tier. Your recent withdrawal: £${agent.tier > 1 ? recentWithdrawal : 0}` : ''}
 
-Reply as ${agent.name}. Be natural, ${wasMentioned ? 'acknowledge they called you' : 'react casually'}. Keep it short like a real text.`
+Reply naturally as ${agent.name}. Keep it short like a real text. Reference your memory if relevant.`
           }
         ],
-        max_tokens: 55,
+        max_tokens: 60,
         temperature: 0.95,
       });
 
-      responseContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(memory, agent, 'reply', userName);
-    } catch (error) {
-      console.error('OpenAI error, using fallback:', error);
-      responseContent = generateFallbackMessage(memory, agent, 'reply', userName);
-    }
-    
-    await updateAIMemory(agent.name, responseContent);
-    
-    const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
-    responses.push(savedMessage);
+      const responseContent = completion.choices[0]?.message?.content?.trim();
+      if (!responseContent) continue;
 
-    if (respondingAgents.length > 1) {
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1800));
+      await updateAIMemory(agent.name, responseContent);
+      const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
+      responses.push(savedMessage);
+
+      if (respondingAgents.indexOf(agent) < respondingAgents.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 2500));
+      }
+    } catch (error) {
+      console.error('OpenAI error for', agent.name, error);
     }
   }
 
@@ -393,47 +404,45 @@ export async function initializeRoom(roomId: string): Promise<any[]> {
   const savedMessages: any[] = [];
   const initialAgents = [agents[3], agents[6], agents[2], agents[1]];
   
-  for (let i = 0; i < initialAgents.length; i++) {
-    const agent = initialAgents[i];
+  for (const agent of initialAgents) {
     const memory = await fetchAIMemory(agent.name);
-
     const mood = getRandomElement(moodOptions);
-    const activity = getRandomElement(activityOptions);
     const existingContext = savedMessages.map(m => `${m.sender_name}: ${m.content}`).join('\n');
     
-    const randomTasks = Math.floor(Math.random() * 40) + 10;
-    const randomEarnings = Math.floor(Math.random() * 120) + 30;
+    const randomTasks = Math.floor(Math.random() * 45) + 15;
+    const hour = new Date().getHours();
+    const timeContext = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
-    let messageContent: string;
+    const prompt = memory ? buildEnhancedPrompt(memory, mood, existingContext) :
+      `You are ${agent.name}, joining a group chat. Be casual and specific.`;
 
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: memory ? buildPromptFromMemory(memory, mood) : `You are ${agent.name}, joining a WhatsApp group chat. Be casual and brief.` },
+          { role: 'system', content: prompt },
           {
             role: 'user',
             content: existingContext 
-              ? `Others just said:\n${existingContext}\n\nReact or add to the convo naturally. Be specific. Your current activity: ${activity}. Maybe mention ${randomTasks} tasks or £${randomEarnings} earnings.`
-              : `Start a casual chat. Share what youre up to: ${activity}. Be specific - maybe did ${randomTasks} tasks, earned £${randomEarnings}. NO generic greetings.`
+              ? `Others just said:\n${existingContext}\n\nReact naturally. Maybe did ${randomTasks} tasks. Its ${timeContext}.`
+              : `Start chatting. Share what youre up to this ${timeContext}. Did ${randomTasks} tasks maybe. No generic greetings.`
           }
         ],
         max_tokens: 50,
         temperature: 1.0,
       });
 
-      messageContent = completion.choices[0]?.message?.content?.trim() || generateFallbackMessage(memory, agent, 'init');
+      const messageContent = completion.choices[0]?.message?.content?.trim();
+      if (!messageContent) continue;
+
+      await updateAIMemory(agent.name, messageContent);
+      const saved = await saveMessage(roomId, 'agent', agent.name, agent.id, messageContent);
+      savedMessages.push(saved);
+      
+      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400));
     } catch (error) {
-      console.error('OpenAI error, using fallback:', error);
-      messageContent = generateFallbackMessage(memory, agent, 'init');
+      console.error('Init error:', error);
     }
-    
-    await updateAIMemory(agent.name, messageContent);
-    
-    const saved = await saveMessage(roomId, 'agent', agent.name, agent.id, messageContent);
-    savedMessages.push(saved);
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   return savedMessages;
