@@ -114,6 +114,9 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     const loadTasks = async () => {
+      const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
+      const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
+      
       try {
         const apiTasks = await api.getTasks();
         if (apiTasks && apiTasks.length > 0) {
@@ -123,16 +126,13 @@ const DashboardLayout = () => {
             category: t.category,
             title: t.title,
             url: t.url,
-            payout: t.payout,
-            status: t.status || 'Pending',
+            payout: Number(t.payout) || 0,
+            status: completedTaskIds.includes(t.id) ? 'Completed' as const : (t.status || 'Pending'),
             durationMinutes: t.category === 'Day' ? 2 : 30
           }));
           setTasks(formattedTasks);
         } else {
           const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
-          const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
-          const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
-          
           let adminTasks: any[] = [];
           if (savedAdminTasks) {
             adminTasks = JSON.parse(savedAdminTasks);
@@ -146,7 +146,7 @@ const DashboardLayout = () => {
               category: adminTask.category,
               title: adminTask.title,
               url: adminTask.url,
-              payout: adminTask.payout,
+              payout: Number(adminTask.payout) || 0,
               status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
               durationMinutes: adminTask.category === 'Day' ? 2 : 30
             }));
@@ -163,8 +163,6 @@ const DashboardLayout = () => {
       } catch (error) {
         console.error('Failed to load tasks from API, using local:', error);
         const savedAdminTasks = localStorage.getItem('donezoAdminTasks');
-        const savedCompletedTasks = localStorage.getItem('donezoCompletedTasks');
-        const completedTaskIds: string[] = savedCompletedTasks ? JSON.parse(savedCompletedTasks) : [];
         
         let adminTasks: any[] = [];
         if (savedAdminTasks) {
@@ -179,12 +177,16 @@ const DashboardLayout = () => {
             category: adminTask.category,
             title: adminTask.title,
             url: adminTask.url,
-            payout: adminTask.payout,
+            payout: Number(adminTask.payout) || 0,
             status: completedTaskIds.includes(adminTask.id) ? 'Completed' as const : 'Pending' as const,
             durationMinutes: adminTask.category === 'Day' ? 2 : 30
           }));
         } else {
-          sourceTasks = generateDefaultTasks();
+          const defaultTasks = generateDefaultTasks();
+          sourceTasks = defaultTasks.map(task => ({
+            ...task,
+            status: completedTaskIds.includes(task.id) ? 'Completed' as const : task.status
+          }));
         }
         
         setTasks(sourceTasks);
