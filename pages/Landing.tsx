@@ -90,101 +90,101 @@ const Landing = () => {
       {/* Salary Tiers Modal */}
       {showTiersModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
-            <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-4 py-3 flex items-center justify-between rounded-t-xl">
               <div>
-                <h2 className="text-2xl font-bold text-white">Salary Tiers</h2>
-                <p className="text-primary-100 text-sm mt-0.5">Three earning levels designed for growth</p>
+                <h2 className="text-lg font-bold text-white">Salary Tiers</h2>
+                <p className="text-primary-100 text-xs">Three earning levels</p>
               </div>
               <button 
                 onClick={() => setShowTiersModal(false)}
                 className="text-white/80 hover:text-white transition-colors"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 space-y-3">
               {/* Basic Tier */}
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                      <Clock size={18} className="text-gray-700" />
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <Clock size={14} className="text-gray-700" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Basic (Tier 1)</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-0.5">£650<span className="text-sm font-normal text-gray-500">/month</span></p>
+                      <h3 className="text-sm font-bold text-gray-900">Basic (T1)</h3>
+                      <p className="text-lg font-bold text-gray-900">£650<span className="text-xs font-normal text-gray-500">/mo</span></p>
                     </div>
                   </div>
-                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">FREE</span>
+                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">FREE</span>
                 </div>
-                <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                  Perfect for beginners. Start earning immediately with no upfront cost. Withdraw your earnings once per month.
+                <p className="text-xs text-gray-600 mb-2 leading-relaxed">
+                  Start earning with no cost. Monthly withdrawals.
                 </p>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <CheckCircle size={14} className="text-green-600" />
-                  <span>Monthly withdrawals • Standard tasks • No fees</span>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+                  <CheckCircle size={12} className="text-green-600 flex-shrink-0" />
+                  <span>Monthly • Standard tasks</span>
                 </div>
               </div>
 
               {/* Professional Tier */}
-              <div className="bg-blue-50 rounded-xl p-5 border-2 border-blue-300 relative">
-                <div className="absolute -top-2.5 right-4 bg-blue-600 text-white px-3 py-0.5 rounded-full text-xs font-bold">
+              <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-300 relative">
+                <div className="absolute -top-2 right-3 bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold">
                   POPULAR
                 </div>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Zap size={18} className="text-white" />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Zap size={14} className="text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Professional (Tier 2)</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-0.5">£1,500<span className="text-sm font-normal text-gray-600">/month</span></p>
+                      <h3 className="text-sm font-bold text-gray-900">Professional (T2)</h3>
+                      <p className="text-lg font-bold text-gray-900">£1,500<span className="text-xs font-normal text-gray-600">/mo</span></p>
                     </div>
                   </div>
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">£250</span>
+                  <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">£250</span>
                 </div>
-                <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                  For committed workers. Pay £250 once to unlock higher earnings, faster withdrawals every Friday, and priority access to premium tasks.
+                <p className="text-xs text-gray-700 mb-2 leading-relaxed">
+                  Pay £250 once for higher earnings & weekly Friday withdrawals.
                 </p>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <CheckCircle size={14} className="text-green-600" />
-                  <span>Weekly withdrawals • Higher rates • Priority tasks</span>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+                  <CheckCircle size={12} className="text-green-600 flex-shrink-0" />
+                  <span>Weekly • Higher rates</span>
                 </div>
               </div>
 
               {/* Expert Tier */}
-              <div className="bg-purple-50 rounded-xl p-5 border-2 border-purple-300">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
-                      <Crown size={18} className="text-white" />
+              <div className="bg-purple-50 rounded-lg p-3 border-2 border-purple-300">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                      <Crown size={14} className="text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Expert (Tier 3)</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-0.5">£3,000<span className="text-sm font-normal text-gray-600">/month</span></p>
+                      <h3 className="text-sm font-bold text-gray-900">Expert (T3)</h3>
+                      <p className="text-lg font-bold text-gray-900">£3,000<span className="text-xs font-normal text-gray-600">/mo</span></p>
                     </div>
                   </div>
-                  <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">£600</span>
+                  <span className="bg-purple-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">£600</span>
                 </div>
-                <p className="text-sm text-gray-700 mb-3 leading-relaxed">
-                  Maximum earning potential. Pay £600 once to unlock instant withdrawals (2-3 minutes), top-tier task rates, and exclusive high-value opportunities.
+                <p className="text-xs text-gray-700 mb-2 leading-relaxed">
+                  Pay £600 once for instant withdrawals (2-3 min) & max rates.
                 </p>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <CheckCircle size={14} className="text-green-600" />
-                  <span>Instant withdrawals • Max rates • Exclusive tasks</span>
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
+                  <CheckCircle size={12} className="text-green-600 flex-shrink-0" />
+                  <span>Instant • Max rates</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-2xl">
-              <div className="flex items-start gap-3">
-                <div className="text-2xl">💡</div>
+            <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 rounded-b-xl">
+              <div className="flex items-start gap-2 mb-3">
+                <div className="text-lg">💡</div>
                 <div>
-                  <p className="text-sm text-gray-700 font-semibold mb-1">Start Free, Upgrade Anytime</p>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    Everyone starts at Basic (free). Once you've earned and want faster withdrawals or higher caps, upgrade to Pro or Expert. Upgrade fees are one-time payments.
+                  <p className="text-xs text-gray-700 font-semibold mb-0.5">Start Free, Upgrade Anytime</p>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Everyone starts at Basic (free). Upgrade fees are one-time payments.
                   </p>
                 </div>
               </div>
@@ -193,7 +193,7 @@ const Landing = () => {
                   setShowTiersModal(false);
                   navigate('/signup');
                 }}
-                className="w-full mt-4 bg-primary-700 text-white py-3 rounded-xl font-semibold hover:bg-primary-800 transition-colors"
+                className="w-full bg-primary-700 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-800 transition-colors"
               >
                 Start Onboarding (Free)
               </button>
