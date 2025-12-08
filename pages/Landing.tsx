@@ -21,7 +21,7 @@ const Landing = () => {
         <div className="flex gap-4">
           <button onClick={() => navigate('/admin')} className="text-sm font-medium text-gray-500 hover:text-gray-800">Admin</button>
           <button onClick={() => navigate('/signup')} className="bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-primary-800 transition-colors">
-            Get Started
+            Onboard
           </button>
         </div>
       </nav>
@@ -40,7 +40,7 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button onClick={() => navigate('/signup')} className="bg-primary-700 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-primary-800 transition-all shadow-lg shadow-primary-700/30 flex items-center justify-center gap-2">
-              Start Earning Now <ArrowRight size={20} />
+              Onboarding <ArrowRight size={20} />
             </button>
             <button className="bg-white text-gray-800 border border-gray-200 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition-colors">
               View Salary Tiers
