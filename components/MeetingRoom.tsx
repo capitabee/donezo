@@ -63,6 +63,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, ch
   const [showParticipants, setShowParticipants] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoMessageIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -84,6 +85,23 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, ch
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Vary online count periodically for realism
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const intervalId = setInterval(() => {
+      setOnlineCount(prev => {
+        // Vary by ±50 from current count
+        const variation = Math.floor(Math.random() * 101) - 50;
+        const newCount = prev + variation;
+        // Keep within range 2,100-2,800
+        return Math.max(2100, Math.min(2800, newCount));
+      });
+    }, 15000); // Update every 15 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [isOpen]);
 
   useEffect(() => {
     if (roomId && isOpen) {
@@ -135,6 +153,8 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, ch
       setRoomId(response.roomId);
       setAgents(response.agents);
       setMessages(response.messages);
+      // Set random online count between 2,100-2,800 out of 3,031 total members
+      setOnlineCount(Math.floor(Math.random() * (2800 - 2100 + 1)) + 2100);
     } catch (error) {
       console.error('Failed to join meeting:', error);
     } finally {
@@ -212,10 +232,10 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, ch
           </div>
           
           <div className="flex-1 ml-2">
-            <h3 className="text-white font-semibold text-sm">Team Meeting Room</h3>
+            <h3 className="text-white font-semibold text-sm">Donezo Community (3,031 members)</h3>
             <p className="text-gray-400 text-xs flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              {agents.length + 1} participants online
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              {onlineCount.toLocaleString()} online now
             </p>
           </div>
           
@@ -285,7 +305,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, ch
               {/* System Message */}
               <div className="flex justify-center">
                 <div className="bg-[#182229] text-gray-400 text-xs px-3 py-1 rounded-lg">
-                  Welcome to Donezo Users Group Chat
+                  💰 Share your withdrawal success & upgrade stories
                 </div>
               </div>
 
