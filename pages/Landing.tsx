@@ -7,6 +7,7 @@ const Landing = () => {
   const [showTiersModal, setShowTiersModal] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const resetTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!buttonRef.current) return;
@@ -22,20 +23,35 @@ const Landing = () => {
     const distanceY = mouseY - buttonCenterY;
     const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
     
-    // If mouse is within 100px of the button, make it dodge
-    if (distance < 100) {
+    // If mouse is within 120px of the button, make it dodge
+    if (distance < 120) {
       // Calculate dodge direction (away from mouse)
       const angle = Math.atan2(distanceY, distanceX);
-      const dodgeDistance = 80;
-      const newX = -Math.cos(angle) * dodgeDistance;
-      const newY = -Math.sin(angle) * dodgeDistance;
+      let dodgeDistance = 150;
+      let newX = buttonPosition.x - Math.cos(angle) * dodgeDistance;
+      let newY = buttonPosition.y - Math.sin(angle) * dodgeDistance;
+      
+      // Get viewport bounds
+      const maxX = window.innerWidth - button.width - 20;
+      const maxY = window.innerHeight - button.height - 20;
+      const minX = -button.left + 20;
+      const minY = -button.top + 20;
+      
+      // Clamp position to stay within viewport
+      newX = Math.max(minX, Math.min(maxX, newX));
+      newY = Math.max(minY, Math.min(maxY, newY));
       
       setButtonPosition({ x: newX, y: newY });
       
-      // Reset position after a moment
-      setTimeout(() => {
+      // Clear existing reset timer
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+      }
+      
+      // Reset position after 7 seconds
+      resetTimerRef.current = setTimeout(() => {
         setButtonPosition({ x: 0, y: 0 });
-      }, 600);
+      }, 7000);
     }
   };
 
