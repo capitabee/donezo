@@ -20,7 +20,8 @@ import {
   pgAdminMessageService,
   pgChatService,
   pgEarningsService,
-  isPostgresConfigured
+  isPostgresConfigured,
+  pool
 } from './services/postgresService';
 import stripeService from './services/stripeService';
 import openaiService from './services/openaiService';
@@ -1667,6 +1668,49 @@ app.post('/api/admin/sync-all-balances', authenticateAdmin, async (req: any, res
   } catch (error) {
     console.error('Sync all balances error:', error);
     res.status(500).json({ error: 'Failed to sync balances' });
+  }
+});
+
+// Admin settings endpoints
+app.get('/api/admin/settings', authenticateAdmin, async (req: any, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM admin_settings');
+    const settings: { [key: string]: boolean } = {};
+    result.rows.forEach(row => {
+      settings[row.setting_key] = row.setting_value;
+    });
+    res.json(settings);
+  } catch (error) {
+    console.error('Get admin settings error:', error);
+    res.status(500).json({ error: 'Failed to get settings' });
+  }
+});
+
+app.post('/api/admin/settings', authenticateAdmin, async (req: any, res) => {
+  try {
+    const { setting_key, setting_value } = req.body;
+    
+    await pool.query(
+      'INSERT INTO admin_settings (setting_key, setting_value, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT (setting_key) DO UPDATE SET setting_value = $2, updated_at = CURRENT_TIMESTAMP',
+      [setting_key, setting_value]
+    );
+    
+    res.json({ success: true, message: 'Setting updated' });
+  } catch (error) {
+    console.error('Update admin settings error:', error);
+    res.status(500).json({ error: 'Failed to update setting' });
+  }
+});
+
+// Public endpoint to get specific settings (for dashboard)
+app.get('/api/settings/meeting-button', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT setting_value FROM admin_settings WHERE setting_key = $1', ['meeting_button_enabled']);
+    const enabled = result.rows.length > 0 ? result.rows[0].setting_value : true;
+    res.json({ enabled });
+  } catch (error) {
+    console.error('Get meeting button setting error:', error);
+    res.json({ enabled: true }); // Default to enabled on error
   }
 });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserTier, AdminMessageType, AdminProps, AdminTask, TaskPlatform, TaskCategory } from '../types';
-import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music, Key, Settings, RefreshCw, Eye, EyeOff, Building2 } from 'lucide-react';
+import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music, Key, Settings, RefreshCw, Eye, EyeOff, Building2, Video } from 'lucide-react';
 import api from '../services/api';
 
 const TrueLayerBalanceSection = ({ userId, connected }: { userId: string; connected: boolean }) => {
@@ -93,7 +93,7 @@ const TrueLayerBalanceSection = ({ userId, connected }: { userId: string; connec
   );
 };
 
-type AdminSection = 'users' | 'broadcasts' | 'tasks' | 'apikeys' | 'financials';
+type AdminSection = 'users' | 'broadcasts' | 'tasks' | 'apikeys' | 'settings';
 
 interface ApiKeyConfig {
   name: string;
@@ -141,6 +141,11 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [newKeyValue, setNewKeyValue] = useState('');
 
+  const [adminSettings, setAdminSettings] = useState<{ [key: string]: boolean }>({
+    meeting_button_enabled: true
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('donezoAdminTasks', JSON.stringify(adminTasks));
   }, [adminTasks]);
@@ -149,8 +154,32 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
     if (isLoggedIn) {
       loadUsers();
       loadStats();
+      loadSettings();
     }
   }, [isLoggedIn]);
+
+  const loadSettings = async () => {
+    try {
+      const settings = await api.getAdminSettings();
+      setAdminSettings(settings);
+    } catch (error) {
+      console.error('Failed to load admin settings:', error);
+    }
+  };
+
+  const toggleSetting = async (settingKey: string) => {
+    setSettingsLoading(true);
+    try {
+      const newValue = !adminSettings[settingKey];
+      await api.updateAdminSetting(settingKey, newValue);
+      setAdminSettings(prev => ({ ...prev, [settingKey]: newValue }));
+    } catch (error) {
+      console.error('Failed to update setting:', error);
+      alert('Failed to update setting');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -412,8 +441,11 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
           >
             <Key size={18} /> API Keys
           </div>
-          <div className="p-3 hover:bg-gray-800 rounded-lg cursor-pointer flex items-center gap-3 text-gray-400">
-            <DollarSign size={18} /> Financials
+          <div 
+            className={`p-3 rounded-lg cursor-pointer flex items-center gap-3 ${selectedAdminSection === 'settings' ? 'bg-gray-800 text-white' : 'hover:bg-gray-800'}`} 
+            onClick={() => {setSelectedUser(null); setSelectedAdminSection('settings');}}
+          >
+            <Settings size={18} /> Settings
           </div>
         </div>
         <button onClick={() => setIsLoggedIn(false)} className="mt-auto text-sm text-gray-500 hover:text-white transition-colors">Logout</button>
@@ -1003,6 +1035,70 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                 <li>• <strong>Stripe Keys:</strong> Handle payment processing for tier upgrades and payouts</li>
                 <li>• <strong>OpenAI Key:</strong> Powers the AI chat assistant and task verification system</li>
                 <li>• <strong>Supabase Keys:</strong> Connect to your database for user data, tasks, and earnings</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {selectedAdminSection === 'settings' && (
+          <div className="animate-in fade-in duration-200">
+            <header className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-800">Platform Settings</h1>
+              <p className="text-gray-500 text-sm">Control dashboard features and functionality for all users.</p>
+            </header>
+
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-6 bg-blue-50 border-b border-blue-100">
+                <div className="flex items-start gap-3">
+                  <Settings size={20} className="text-blue-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-blue-800">Global Controls</div>
+                    <p className="text-sm text-blue-700">These settings affect all users in real-time. Changes are applied immediately.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="divide-y divide-gray-100">
+                <div className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Video size={16} className="text-gray-400" />
+                        <span className="font-bold text-gray-900">Team Meeting Button</span>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {adminSettings.meeting_button_enabled 
+                          ? 'Users can start team meetings from their dashboard' 
+                          : 'Team meeting button is hidden from all users'}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => toggleSetting('meeting_button_enabled')}
+                      disabled={settingsLoading}
+                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 ${
+                        adminSettings.meeting_button_enabled ? 'bg-green-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                          adminSettings.meeting_button_enabled ? 'translate-x-7' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-green-50 rounded-2xl p-6 border border-green-100">
+              <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2">
+                <CheckCircle size={18} /> How Settings Work
+              </h3>
+              <ul className="text-sm text-green-800 space-y-2">
+                <li>• <strong>Instant Updates:</strong> All changes are applied immediately without server restart</li>
+                <li>• <strong>User Experience:</strong> When you disable a feature, it's hidden from the dashboard instantly</li>
+                <li>• <strong>Reversible:</strong> You can enable/disable features at any time</li>
               </ul>
             </div>
           </div>

@@ -323,6 +323,23 @@ class ApiService {
   async syncAllBankBalances() {
     return this.adminRequest('/admin/sync-all-balances', { method: 'POST' });
   }
+
+  // Admin settings
+  async getAdminSettings() {
+    return this.adminRequest('/admin/settings');
+  }
+
+  async updateAdminSetting(setting_key: string, setting_value: boolean) {
+    return this.adminRequest('/admin/settings', {
+      method: 'POST',
+      body: JSON.stringify({ setting_key, setting_value })
+    });
+  }
+
+  // Public settings
+  async getMeetingButtonStatus() {
+    return this.request('/settings/meeting-button');
+  }
 }
 
 export const api = new ApiService();
