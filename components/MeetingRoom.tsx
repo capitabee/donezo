@@ -24,6 +24,7 @@ interface MeetingRoomProps {
   isOpen: boolean;
   onClose: () => void;
   userName: string;
+  chatEnabled?: boolean;
 }
 
 const nameColors = [
@@ -53,7 +54,7 @@ const getTierBadge = (tier: number) => {
   return { text: 'T1', bg: 'bg-gray-500', title: 'Tier 1 - Free' };
 };
 
-const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) => {
+const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, chatEnabled = true }) => {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -326,30 +327,42 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName }) 
         </div>
 
         {/* Input Area - WhatsApp Style */}
-        <div className="bg-[#202c33] px-4 py-3 flex items-center gap-3">
-          <button className="text-gray-400 hover:text-white transition-colors">
-            <Smile size={24} />
-          </button>
-          
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type a message..."
-              disabled={loading}
-              className="w-full bg-[#2a3942] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none disabled:opacity-50"
-            />
+        <div className="bg-[#202c33]">
+          {!chatEnabled && (
+            <div className="px-4 py-2 bg-yellow-900/30 border-t border-yellow-700/30">
+              <p className="text-yellow-400 text-xs text-center">
+                ⚠️ Chat is currently disabled by admin. You can view messages but cannot send new ones.
+              </p>
+            </div>
+          )}
+          <div className="px-4 py-3 flex items-center gap-3">
+            <button 
+              className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              disabled={!chatEnabled || loading}
+            >
+              <Smile size={24} />
+            </button>
+            
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={chatEnabled ? "Type a message..." : "Chat is disabled by admin"}
+                disabled={!chatEnabled || loading}
+                className="w-full bg-[#2a3942] text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            
+            <button
+              onClick={sendMessage}
+              disabled={!chatEnabled || !inputMessage.trim() || loading}
+              className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00bf97] transition-colors"
+            >
+              <Send size={18} />
+            </button>
           </div>
-          
-          <button
-            onClick={sendMessage}
-            disabled={!inputMessage.trim() || loading}
-            className="w-10 h-10 bg-[#00a884] rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#00bf97] transition-colors"
-          >
-            <Send size={18} />
-          </button>
         </div>
       </div>
     </div>
