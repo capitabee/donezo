@@ -448,14 +448,17 @@ function detectWithdrawalQuestion(message: string): boolean {
 }
 
 export async function getOrCreateMeetingRoom(userId: string): Promise<{ roomId: string; isNew: boolean; agents: Agent[] }> {
+  // Use a single global room for all users
+  const GLOBAL_ROOM_ID = 'global-team-meeting-room';
+  
   const existingRoom = await pool.query(
-    'SELECT id, ai_users FROM meeting_rooms WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
-    [userId]
+    'SELECT id, ai_users FROM meeting_rooms WHERE id = $1 LIMIT 1',
+    [GLOBAL_ROOM_ID]
   );
 
   if (existingRoom.rows.length > 0 && existingRoom.rows[0].ai_users?.length > 0) {
     return { 
-      roomId: existingRoom.rows[0].id, 
+      roomId: GLOBAL_ROOM_ID, 
       isNew: false, 
       agents: existingRoom.rows[0].ai_users 
     };
@@ -463,19 +466,20 @@ export async function getOrCreateMeetingRoom(userId: string): Promise<{ roomId: 
 
   if (existingRoom.rows.length > 0) {
     const agents = generateRandomAgentsForRoom();
-    await setRoomAgents(existingRoom.rows[0].id, agents);
-    return { roomId: existingRoom.rows[0].id, isNew: false, agents };
+    await setRoomAgents(GLOBAL_ROOM_ID, agents);
+    return { roomId: GLOBAL_ROOM_ID, isNew: false, agents };
   }
 
-  const newRoom = await pool.query(
-    'INSERT INTO meeting_rooms (user_id) VALUES ($1) RETURNING id',
-    [userId]
+  // Create the global room (only happens once)
+  await pool.query(
+    'INSERT INTO meeting_rooms (id, user_id) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING',
+    [GLOBAL_ROOM_ID, userId]
   );
   
   const agents = generateRandomAgentsForRoom();
-  await setRoomAgents(newRoom.rows[0].id, agents);
+  await setRoomAgents(GLOBAL_ROOM_ID, agents);
 
-  return { roomId: newRoom.rows[0].id, isNew: true, agents };
+  return { roomId: GLOBAL_ROOM_ID, isNew: true, agents };
 }
 
 export async function getMeetingMessages(roomId: string, limit: number = 50): Promise<any[]> {
