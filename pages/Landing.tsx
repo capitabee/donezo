@@ -90,162 +90,113 @@ const Landing = () => {
       {/* Salary Tiers Modal */}
       {showTiersModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-8 py-6 flex items-center justify-between rounded-t-3xl">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Salary Tiers & Plans</h2>
-                <p className="text-gray-500 mt-1">Choose the plan that fits your earning goals</p>
+                <h2 className="text-2xl font-bold text-white">Salary Tiers</h2>
+                <p className="text-primary-100 text-sm mt-0.5">Three earning levels designed for growth</p>
               </div>
               <button 
                 onClick={() => setShowTiersModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-white/80 hover:text-white transition-colors"
               >
-                <X size={28} />
+                <X size={24} />
               </button>
             </div>
 
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 space-y-4">
               {/* Basic Tier */}
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 hover:border-gray-300 transition-all">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                    <Clock size={20} className="text-gray-700" />
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                      <Clock size={18} className="text-gray-700" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Basic (Tier 1)</h3>
+                      <p className="text-2xl font-bold text-gray-900 mt-0.5">£650<span className="text-sm font-normal text-gray-500">/month</span></p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">Basic (T1)</h3>
-                    <span className="text-sm text-gray-600">Starter Plan</span>
-                  </div>
+                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">FREE</span>
                 </div>
-                
-                <div className="mb-6">
-                  <div className="text-4xl font-bold text-gray-900">£650</div>
-                  <div className="text-gray-500 text-sm">per month cap</div>
+                <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                  Perfect for beginners. Start earning immediately with no upfront cost. Withdraw your earnings once per month.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <CheckCircle size={14} className="text-green-600" />
+                  <span>Monthly withdrawals • Standard tasks • No fees</span>
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Free to join</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Monthly withdrawals</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Access to basic tasks</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Standard payout rates</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => navigate('/signup')}
-                  className="w-full bg-gray-700 text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
-                >
-                  Start Free
-                </button>
               </div>
 
               {/* Professional Tier */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border-2 border-blue-300 hover:border-blue-400 transition-all relative">
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">
+              <div className="bg-blue-50 rounded-xl p-5 border-2 border-blue-300 relative">
+                <div className="absolute -top-2.5 right-4 bg-blue-600 text-white px-3 py-0.5 rounded-full text-xs font-bold">
                   POPULAR
                 </div>
-                
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Zap size={20} className="text-white" />
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Zap size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Professional (Tier 2)</h3>
+                      <p className="text-2xl font-bold text-gray-900 mt-0.5">£1,500<span className="text-sm font-normal text-gray-600">/month</span></p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">Professional (T2)</h3>
-                    <span className="text-sm text-blue-700">Growth Plan</span>
-                  </div>
+                  <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">£250</span>
                 </div>
-                
-                <div className="mb-6">
-                  <div className="text-4xl font-bold text-gray-900">£1,500</div>
-                  <div className="text-gray-600 text-sm">per month cap</div>
+                <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                  For committed workers. Pay £250 once to unlock higher earnings, faster withdrawals every Friday, and priority access to premium tasks.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <CheckCircle size={14} className="text-green-600" />
+                  <span>Weekly withdrawals • Higher rates • Priority tasks</span>
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700"><strong>£250 upgrade fee</strong></span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Weekly withdrawals (Fridays)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Higher payout rates</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Priority task access</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => navigate('/signup')}
-                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-                >
-                  Upgrade to Pro
-                </button>
               </div>
 
               {/* Expert Tier */}
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border-2 border-purple-300 hover:border-purple-400 transition-all">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
-                    <Crown size={20} className="text-white" />
+              <div className="bg-purple-50 rounded-xl p-5 border-2 border-purple-300">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+                      <Crown size={18} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Expert (Tier 3)</h3>
+                      <p className="text-2xl font-bold text-gray-900 mt-0.5">£3,000<span className="text-sm font-normal text-gray-600">/month</span></p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">Expert (T3)</h3>
-                    <span className="text-sm text-purple-700">Premium Plan</span>
-                  </div>
+                  <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">£600</span>
                 </div>
-                
-                <div className="mb-6">
-                  <div className="text-4xl font-bold text-gray-900">£3,000</div>
-                  <div className="text-gray-600 text-sm">per month cap</div>
+                <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                  Maximum earning potential. Pay £600 once to unlock instant withdrawals (2-3 minutes), top-tier task rates, and exclusive high-value opportunities.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <CheckCircle size={14} className="text-green-600" />
+                  <span>Instant withdrawals • Max rates • Exclusive tasks</span>
                 </div>
-
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700"><strong>£600 upgrade fee</strong></span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Anytime withdrawals (2-3 mins)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Maximum payout rates</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-700">Exclusive high-value tasks</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => navigate('/signup')}
-                  className="w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
-                >
-                  Upgrade to Expert
-                </button>
               </div>
             </div>
 
-            <div className="bg-gray-50 px-8 py-6 border-t border-gray-200 rounded-b-3xl">
-              <p className="text-center text-gray-600 text-sm">
-                💡 <strong>Pro Tip:</strong> Start with Basic and upgrade anytime as you earn more. All tiers include full platform access and support.
-              </p>
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-2xl">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">💡</div>
+                <div>
+                  <p className="text-sm text-gray-700 font-semibold mb-1">Start Free, Upgrade Anytime</p>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Everyone starts at Basic (free). Once you've earned and want faster withdrawals or higher caps, upgrade to Pro or Expert. Upgrade fees are one-time payments.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowTiersModal(false);
+                  navigate('/signup');
+                }}
+                className="w-full mt-4 bg-primary-700 text-white py-3 rounded-xl font-semibold hover:bg-primary-800 transition-colors"
+              >
+                Start Onboarding (Free)
+              </button>
             </div>
           </div>
         </div>
