@@ -5,9 +5,42 @@ import { ArrowRight, CheckCircle, Shield, Globe, X, Clock, Zap, Crown } from 'lu
 const Landing = () => {
   const navigate = useNavigate();
   const [showTiersModal, setShowTiersModal] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!buttonRef.current) return;
+    
+    const button = buttonRef.current.getBoundingClientRect();
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    
+    const buttonCenterX = button.left + button.width / 2;
+    const buttonCenterY = button.top + button.height / 2;
+    
+    const distanceX = mouseX - buttonCenterX;
+    const distanceY = mouseY - buttonCenterY;
+    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+    
+    // If mouse is within 100px of the button, make it dodge
+    if (distance < 100) {
+      // Calculate dodge direction (away from mouse)
+      const angle = Math.atan2(distanceY, distanceX);
+      const dodgeDistance = 80;
+      const newX = -Math.cos(angle) * dodgeDistance;
+      const newY = -Math.sin(angle) * dodgeDistance;
+      
+      setButtonPosition({ x: newX, y: newY });
+      
+      // Reset position after a moment
+      setTimeout(() => {
+        setButtonPosition({ x: 0, y: 0 });
+      }, 600);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" onMouseMove={handleMouseMove}>
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
@@ -21,7 +54,15 @@ const Landing = () => {
         </div>
         <div className="flex gap-4">
           <button onClick={() => navigate('/admin')} className="text-sm font-medium text-gray-500 hover:text-gray-800">Admin</button>
-          <button onClick={() => navigate('/signup')} className="bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-primary-800 transition-colors">
+          <button 
+            ref={buttonRef}
+            onClick={() => navigate('/signup')} 
+            className="bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-primary-800 transition-colors"
+            style={{
+              transform: `translate(${buttonPosition.x}px, ${buttonPosition.y}px)`,
+              transition: buttonPosition.x !== 0 || buttonPosition.y !== 0 ? 'transform 0.4s ease-out' : 'none'
+            }}
+          >
             Onboard
           </button>
         </div>

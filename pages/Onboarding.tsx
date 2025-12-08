@@ -17,9 +17,6 @@ const Onboarding = () => {
   const [bankConnected, setBankConnected] = useState(false);
   const [cardConnecting, setCardConnecting] = useState(false);
   const [cardConnected, setCardConnected] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
-  const [dodgeAttempts, setDodgeAttempts] = useState(0);
-  const buttonRef = React.useRef<HTMLDivElement>(null);
 
   const hasProcessedCallback = React.useRef(false);
   
@@ -66,48 +63,9 @@ const Onboarding = () => {
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!buttonRef.current || !termsAccepted || loading || dodgeAttempts >= 5) return;
-    
-    const button = buttonRef.current.getBoundingClientRect();
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    
-    const buttonCenterX = button.left + button.width / 2;
-    const buttonCenterY = button.top + button.height / 2;
-    
-    const distanceX = mouseX - buttonCenterX;
-    const distanceY = mouseY - buttonCenterY;
-    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-    
-    // If mouse is within 150px of the button, make it dodge
-    if (distance < 150) {
-      setDodgeAttempts(prev => prev + 1);
-      
-      // Calculate dodge direction (away from mouse)
-      const angle = Math.atan2(distanceY, distanceX);
-      const dodgeDistance = 120;
-      const newX = -Math.cos(angle) * dodgeDistance;
-      const newY = -Math.sin(angle) * dodgeDistance;
-      
-      setButtonPosition({ x: newX, y: newY });
-      
-      // Reset position after 1 second
-      setTimeout(() => {
-        setButtonPosition({ x: 0, y: 0 });
-      }, 800);
-    }
-  };
-
   const handleAcceptOffer = async () => {
     if (!termsAccepted) {
       setError('Please accept the terms and conditions');
-      return;
-    }
-    
-    // Only allow if they've tried at least 5 times or clicked successfully
-    if (dodgeAttempts < 5) {
-      setError('Try harder! The button is a bit playful... 😏');
       return;
     }
     
@@ -337,41 +295,22 @@ const Onboarding = () => {
           </span>
         </label>
 
-        <div className="flex gap-4" onMouseMove={handleMouseMove}>
-          <div 
-            ref={buttonRef}
-            className="flex-1"
-            style={{
-              transform: `translate(${buttonPosition.x}px, ${buttonPosition.y}px)`,
-              transition: buttonPosition.x !== 0 || buttonPosition.y !== 0 ? 'transform 0.3s ease-out' : 'none'
-            }}
+        <div className="flex gap-4">
+          <button
+            onClick={handleAcceptOffer}
+            disabled={loading || !termsAccepted}
+            className="flex-1 bg-gradient-to-r from-primary-600 to-purple-600 text-white py-4 rounded-xl font-bold hover:from-primary-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <button
-              onClick={handleAcceptOffer}
-              disabled={loading || !termsAccepted}
-              className="w-full bg-gradient-to-r from-primary-600 to-purple-600 text-white py-4 rounded-xl font-bold hover:from-primary-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : dodgeAttempts >= 5 ? (
-                <>
-                  Okay fine, you caught me! Proceed →
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              ) : (
-                <>
-                  Accept & Continue {dodgeAttempts > 0 && '😏'}
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </div>
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            ) : (
+              <>
+                Accept & Continue
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
         </div>
-        {dodgeAttempts > 0 && dodgeAttempts < 5 && (
-          <p className="text-center text-purple-300 text-sm mt-3">
-            Tries: {dodgeAttempts}/5 - Keep trying! 🎯
-          </p>
-        )}
       </div>
     </div>
   );
