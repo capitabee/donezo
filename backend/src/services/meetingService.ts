@@ -448,8 +448,8 @@ function detectWithdrawalQuestion(message: string): boolean {
 }
 
 export async function getOrCreateMeetingRoom(userId: string): Promise<{ roomId: string; isNew: boolean; agents: Agent[] }> {
-  // Use a single global room for all users
-  const GLOBAL_ROOM_ID = 'global-team-meeting-room';
+  // Use a single global room for all users (fixed UUID)
+  const GLOBAL_ROOM_ID = '00000000-0000-0000-0000-000000000001';
   
   const existingRoom = await pool.query(
     'SELECT id, ai_users FROM meeting_rooms WHERE id = $1 LIMIT 1',
