@@ -648,18 +648,12 @@ export async function generateAgentAutoMessage(roomId: string): Promise<any> {
   const recentMessages = await getMeetingMessages(roomId, 15);
   const context = recentMessages.slice(-8).map(m => `${m.sender_name}: ${m.content}`).join('\n');
   
-  const hour = new Date().getHours();
-  const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-  const timeContext = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'evening' : 'night';
+  // Withdrawal amounts between £1,400-£3,000
+  const withdrawalAmounts = [1423, 1567, 1689, 1734, 1845, 1923, 2034, 2145, 2267, 2389, 2456, 2578, 2634, 2789, 2891, 2967];
+  const withdrawAmount = withdrawalAmounts[Math.floor(Math.random() * withdrawalAmounts.length)];
   
-  const tier2Amounts = [115, 127, 145, 168, 182, 195, 210, 227];
-  const tier3Amounts = [67, 85, 95, 120, 145, 167, 185, 200];
-  
-  const withdrawAmount = randomAgent.tier === 2 
-    ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
-    : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
-  
-  const randomTasks = Math.floor(Math.random() * 45) + 15;
+  // Decide message type: 60% withdrawal success, 40% upgrade story
+  const messageType = Math.random() < 0.6 ? 'withdrawal' : 'upgrade';
 
   let messageContent: string;
   
@@ -670,26 +664,37 @@ export async function generateAgentAutoMessage(roomId: string): Promise<any> {
         { role: 'system', content: buildHumanPrompt(randomAgent, context, mood) },
         {
           role: 'user',
-          content: `Its ${timeContext} on ${dayOfWeek}. You're ${mood} right now.
+          content: messageType === 'withdrawal' 
+            ? `Share a WITHDRAWAL SUCCESS STORY casually.
 
-Send a casual message to the group. Maybe:
-- share that you did ${randomTasks} tasks today
-- mention a withdrawal (tier 2: £${withdrawAmount} weekly, tier 3: £${withdrawAmount} anytime, tier 1: waiting for month end)
-- react to the recent chat
-- share something positive about your day
-- encourage someone
-- make a small joke
+Your successful withdrawal: £${withdrawAmount}
+Status: COMPLETE
 
-Keep it SHORT and REAL. One sentence, maybe two. Like a quick text to friends.`
+Write ONE message (can be short or long):
+- SHORT example: "just withdrew £${withdrawAmount} bro, status complete 🎉"
+- LONG example: "yaar honestly just checked my bank and the £${withdrawAmount} withdrawal came through, status showing complete. ${randomAgent.tier === 3 ? 'tier 3 is mad, took literally 2 minutes' : 'got it this Friday as usual, so smooth na'}. loving this platform bro"
+
+Use your natural slang: ${randomAgent.slang.join(', ')}
+Be excited about the successful withdrawal!`
+            : `Share your TIER UPGRADE STORY casually.
+
+${randomAgent.tier === 2 ? 'You RECHARGED £250 for Tier 2 upgrade' : randomAgent.tier === 3 ? 'You RECHARGED £600 for Tier 3 upgrade' : 'You are thinking about upgrading soon'}
+
+Write ONE message (can be short or long):
+- SHORT example: "recharged for tier ${randomAgent.tier} last week, totally worth it bro"
+- LONG example: "${randomAgent.tier === 3 ? 'honestly best decision was paying that £600 for tier 3 yaar. last week withdrew £2,456 on Monday then again £1,823 on Thursday same day I needed it. already made back the recharge amount bro' : randomAgent.tier === 2 ? 'paid £250 to upgrade to tier 2 few weeks back and honestly every Friday money comes so smooth na. worth it for the weekly payouts bhai' : 'thinking about upgrading to tier 2 soon yaar, that £250 recharge for weekly payouts looks good'}"
+
+Use your natural slang: ${randomAgent.slang.join(', ')}
+${randomAgent.tier > 1 ? 'Talk about how the recharge was worth it!' : 'Show interest in upgrading!'}`
         }
       ],
-      max_tokens: 50,
-      temperature: 1.1,
+      max_tokens: 80,
+      temperature: 0.95,
     });
 
     messageContent = completion.choices[0]?.message?.content?.trim() || generateAutoMessage(randomAgent, context.split('\n'));
   } catch (error) {
-    console.error('OpenAI error, using fallback:', error);
+    console.error('Grok error, using fallback:', error);
     messageContent = generateAutoMessage(randomAgent, context.split('\n'));
   }
   
@@ -758,11 +763,9 @@ export async function generateAgentResponses(
     const shouldUseName = i === 0 && Math.random() < 0.3;
     if (shouldUseName) firstResponderUsedName = true;
 
-    const tier2Amounts = [150, 180, 210, 245, 280, 320];
-    const tier3Amounts = [120, 167, 200, 285, 350, 420];
-    const recentWithdrawal = agent.tier === 2 
-      ? tier2Amounts[Math.floor(Math.random() * tier2Amounts.length)]
-      : tier3Amounts[Math.floor(Math.random() * tier3Amounts.length)];
+    // Withdrawal amounts between £1,400-£3,000
+    const withdrawalAmounts = [1423, 1567, 1689, 1734, 1845, 1923, 2034, 2145, 2267, 2389, 2456, 2578, 2634, 2789, 2891, 2967];
+    const recentWithdrawal = withdrawalAmounts[Math.floor(Math.random() * withdrawalAmounts.length)];
 
     // Add realistic delay: 15 seconds before first reply, 2-4 seconds between others
     const delay = i === 0 ? 15000 : 2000 + Math.random() * 2000;
@@ -781,25 +784,25 @@ export async function generateAgentResponses(
           { role: 'system', content: buildHumanPrompt(agent, context, mood) },
           {
             role: 'user',
-            content: `Someone in chat asked: "${userMessage}"
+            content: `Someone in chat said: "${userMessage}"
 
-YOUR REAL STATS (use these when asked):
-${agent.tier === 1 ? `- FREE tier 1, max £650/month, paid monthly on 30th
-- Total earned so far: £${1200 + Math.floor(Math.random() * 600)} over 3 months
-- Thinking about upgrading to tier 2 soon` : ''}
-${agent.tier === 2 ? `- PAID £250 for tier 2, max £1500/month, weekly payouts Friday
-- Last withdrawal: £${recentWithdrawal}
-- Total earned so far: £${3200 + Math.floor(Math.random() * 1000)} over 3 months
-- The £250 upgrade paid itself back in first 2 weeks` : ''}
-${agent.tier === 3 ? `- PAID £600 for tier 3, max £3000/month, withdraw anytime
-- Last withdrawal: £${recentWithdrawal}
-- Total earned so far: £${6500 + Math.floor(Math.random() * 2000)} over 3 months
-- The £600 was 100% worth it, made it back in like 10 days` : ''}
+Reply by sharing YOUR PLATFORM SUCCESS STORY:
+${agent.tier === 1 ? `- Mention your successful withdrawals (£1,400-£3,000 range with "status complete")
+- Talk about wanting to upgrade to tier 2 (£250 recharge) for weekly payouts` : ''}
+${agent.tier === 2 ? `- Share your TIER 2 UPGRADE: You RECHARGED £250 for weekly payouts
+- Mention your last withdrawal: £${recentWithdrawal} with status complete
+- Talk about how the £250 recharge was worth it for weekly Friday payouts
+- Example: "bro I recharged £250 for tier 2 last month, totally worth it. just got my £${recentWithdrawal} withdrawal yesterday, status complete yaar"` : ''}
+${agent.tier === 3 ? `- Share your TIER 3 UPGRADE: You RECHARGED £600 for anytime withdrawals  
+- Mention your last withdrawal: £${recentWithdrawal} with status complete in 2-3 minutes
+- Talk about how the £600 recharge was worth it for instant access
+- Example: "honestly mate paid £600 for tier 3 and best decision. withdrew £${recentWithdrawal} on Tuesday, status complete in literally 2 minutes na"` : ''}
 
-${wasMentioned ? 'IMPORTANT: They mentioned YOUR NAME directly - you MUST respond with YOUR story and numbers!' : ''}
+${wasMentioned ? 'IMPORTANT: They mentioned YOUR NAME - respond with YOUR platform success story!' : ''}
 ${nameInstruction}
 
-If they ask about earnings or how much you made, share your TOTAL earnings proudly. Be encouraging and real. 1-3 sentences, casual but helpful.`
+FOCUS ON: Withdrawal success stories and tier upgrade experiences ONLY.
+Keep it natural, 1-3 sentences. Use your slang: ${agent.slang.join(', ')}`
           }
         ],
         max_tokens: 150,
