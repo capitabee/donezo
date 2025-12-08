@@ -290,271 +290,149 @@ function detectIntent(message: string): string {
 function generateSmartReply(agent: Agent, userMessage: string, userName: string, recentContext: string[]): string {
   const s = getRandomElement(agent.slang);
   const intent = detectIntent(userMessage);
-  const randomTasks = Math.floor(Math.random() * 40) + 15;
-  const tier2Amounts = [127, 145, 168, 182, 195, 210, 227];
-  const tier3Amounts = [85, 120, 145, 167, 185, 200, 235];
-  const withdrawAmount = agent.tier === 2 
-    ? getRandomElement(tier2Amounts)
-    : getRandomElement(tier3Amounts);
+  // Withdrawal amounts between £1,400-£3,000
+  const withdrawalAmounts = [1423, 1567, 1689, 1734, 1845, 1923, 2034, 2145, 2267, 2389, 2456, 2578, 2634, 2789, 2891, 2967];
+  const withdrawAmount = getRandomElement(withdrawalAmounts);
   
+  // All responses focus on platform promotion
   switch (intent) {
     case 'greeting':
-      return getRandomElement([
-        `yo ${userName}! ${s} 👋`,
-        `${s} hey ${userName} whats good`,
-        `${userName}! good to see u ${s}`,
-        `ayy ${userName} ${s}`,
-        `whats good ${userName} ${s}`,
-        `hey! hows it going ${userName}? ${s}`
-      ]);
-      
     case 'how_are_you':
-      return getRandomElement([
-        `im good ${s} just grinding away, you?`,
-        `${s} doing well! ${randomTasks} tasks in today`,
-        `cant complain ${s} the money keeps coming`,
-        `good vibes today ${s} how about you?`,
-        `${s} im great, just finished a bunch of tasks`
-      ]);
+      // Respond with withdrawal success or upgrade story
+      if (agent.tier === 1) {
+        return getRandomElement([
+          `${s} doing good! waiting for my next withdrawal, earned £${withdrawAmount} total so far`,
+          `hey ${s}! thinking about upgrading to tier 2, £250 recharge for weekly payouts`
+        ]);
+      } else if (agent.tier === 2) {
+        return getRandomElement([
+          `${s} great! just got my £${withdrawAmount} withdrawal, status complete`,
+          `doing well ${s}! recharged £250 for tier 2, weekly payouts are smooth bro`
+        ]);
+      } else {
+        return getRandomElement([
+          `${s} mad good! withdrew £${withdrawAmount} earlier, status complete in 2 minutes`,
+          `great ${s}! tier 3 recharge of £600 was worth it, just pulled £${withdrawAmount}`
+        ]);
+      }
       
     case 'when_joined':
-      const months = Math.floor(Math.random() * 4) + 2;
-      return getRandomElement([
-        `been here like ${months} months now ${s}`,
-        `${s} joined about ${months} months ago, best decision`,
-        `maybe ${months} months? time flies when ur making money ${s}`,
-        `${s} few months now, started tier 1 and upgraded`
-      ]);
+      if (agent.tier >= 2) {
+        return getRandomElement([
+          `${s} been here few months, recharged for tier ${agent.tier} and already made back the investment bro`,
+          `joined like 3 months back ${s}, tier ${agent.tier} upgrade was best decision`
+        ]);
+      } else {
+        return getRandomElement([
+          `${s} few months now, got £${withdrawAmount} in withdrawals total, status complete every time`,
+          `been here a while ${s}, planning to recharge for tier 2 upgrade soon`
+        ]);
+      }
       
     case 'new_user':
-      return getRandomElement([
-        `welcome! ${s} youll love it here`,
-        `${s} nice! just do ur tasks daily and the money adds up`,
-        `ayy welcome ${s} let us know if u need any tips`,
-        `${s} good to have u! stick with it, it works`,
-        `welcome to the fam ${s} this platform is legit`
-      ]);
-      
     case 'withdrawal':
-      if (agent.tier === 1) {
-        return getRandomElement([
-          `im tier 1 so i wait for month end ${s} but its worth it`,
-          `${s} still building up my balance, payday coming soon`,
-          `counting down to the 30th ${s} got like £${Math.floor(Math.random() * 200) + 100} saved up`,
-          `${s} cant withdraw yet but my earnings looking good`,
-          `month end for me ${s} saving up for that big payday`
-        ]);
-      } else if (agent.tier === 2) {
-        return getRandomElement([
-          `just got £${withdrawAmount} on friday ${s}`,
-          `${s} weekly payouts are 🔥 got £${withdrawAmount} last week`,
-          `every friday i get paid ${s} last one was £${withdrawAmount}`,
-          `${s} upgraded to tier 2 and now i get weekly, so worth it`,
-          `yeah my last withdrawal was £${withdrawAmount} ${s} comes every friday`
-        ]);
-      } else {
-        return getRandomElement([
-          `just withdrew £${withdrawAmount} like 10 mins ago ${s}`,
-          `${s} i withdraw whenever i want, pulled £${withdrawAmount} today`,
-          `tier 3 means instant withdrawals ${s} got £${withdrawAmount} earlier`,
-          `${s} withdrew £${withdrawAmount} this morning, took 2 minutes`,
-          `anytime withdrawals are elite ${s} just got £${withdrawAmount}`
-        ]);
-      }
-      
     case 'tasks':
-      return getRandomElement([
-        `done ${randomTasks} today ${s} not bad`,
-        `${s} i did like ${randomTasks} tasks so far, aiming for more`,
-        `about ${randomTasks} ${s} the youtube ones are quickest`,
-        `${randomTasks} and counting ${s} grinding hard today`,
-        `${s} ${randomTasks} done, taking a quick break rn`
-      ]);
-      
     case 'upgrade':
-      if (agent.tier === 1) {
-        return getRandomElement([
-          `${s} im still tier 1 but thinking about upgrading soon`,
-          `saving up to upgrade ${s} everyone says its worth it`,
-          `${s} cant wait to upgrade, weekly payouts sound nice`
-        ]);
-      } else if (agent.tier === 2) {
-        return getRandomElement([
-          `${s} best decision i made was upgrading to tier 2`,
-          `100% worth it ${s} weekly payouts changed everything`,
-          `${s} upgraded like a month ago, already made the money back`,
-          `tier 2 is solid ${s} weekly cash is nice`
-        ]);
-      } else {
-        return getRandomElement([
-          `tier 3 is the move ${s} instant withdrawals are elite`,
-          `${s} upgraded to tier 3, no regrets at all`,
-          `if u can afford tier 3, do it ${s} the freedom is worth it`,
-          `${s} tier 3 is next level, withdraw whenever u want`
-        ]);
-      }
-      
     case 'help':
-      return getRandomElement([
-        `${s} just do tasks and the money comes, its pretty simple`,
-        `watch the vids fully and submit ${s} thats basically it`,
-        `${s} start with the easy ones, youtube tasks are quick`,
-        `just be consistent ${s} i do like ${randomTasks} a day`,
-        `${s} any specific questions? happy to help`
-      ]);
-      
     case 'thanks':
-      return getRandomElement([
-        `no worries ${s} 👍`,
-        `${s} anytime fam`,
-        `all good ${s}`,
-        `${s} we help each other here`,
-        `np ${s} thats what the group is for`
-      ]);
-      
     case 'sharing_progress':
-      return getRandomElement([
-        `nice one! ${s} keep it up 💪`,
-        `${s} thats solid progress`,
-        `lets go ${s} ur smashing it`,
-        `${s} good stuff, keep grinding`,
-        `ayy congrats ${s} 🔥`
-      ]);
-      
     case 'opinion':
-      return getRandomElement([
-        `${s} honestly i think this platform is legit`,
-        `imo its worth it ${s} the money comes through`,
-        `${s} i rate it highly, been great for me`,
-        `my opinion? stick with it ${s} it works`
-      ]);
-      
     case 'goodbye':
-      return getRandomElement([
-        `later ${userName}! ${s}`,
-        `${s} see ya, good grinding today`,
-        `bye! ${s} catch u next time`,
-        `${s} take care ${userName}`,
-        `later ${s} 👋`
-      ]);
-      
     default:
-      // General conversational responses
-      return getRandomElement([
-        `${s} facts`,
-        `yeah i feel that ${s}`,
-        `${s} same here honestly`,
-        `real talk ${s}`,
-        `${s} 💯`,
-        `${s} i hear that`,
-        `true ${s}`,
-        `for real ${s}`,
-        `${s} yeah`,
-        `makes sense ${s}`
-      ]);
+      // ALL responses focus on withdrawal success or upgrade stories
+      const messageType = Math.random() < 0.5 ? 'withdrawal' : 'upgrade';
+      
+      if (messageType === 'withdrawal') {
+        if (agent.tier === 1) {
+          return getRandomElement([
+            `${s} my £${withdrawAmount} withdrawal came through, status complete`,
+            `got £${withdrawAmount} total withdrawn so far ${s}, status always complete`
+          ]);
+        } else if (agent.tier === 2) {
+          return getRandomElement([
+            `${s} just got £${withdrawAmount} withdrawal, status complete`,
+            `my £${withdrawAmount} came through friday ${s}, status showed complete`
+          ]);
+        } else {
+          return getRandomElement([
+            `withdrew £${withdrawAmount} earlier ${s}, status complete in 2 minutes`,
+            `${s} £${withdrawAmount} withdrawal done, status complete literally instant bro`
+          ]);
+        }
+      } else {
+        if (agent.tier === 1) {
+          return getRandomElement([
+            `${s} planning to recharge £250 for tier 2 upgrade soon`,
+            `thinking about tier 2 upgrade ${s}, £250 recharge for weekly payouts`
+          ]);
+        } else if (agent.tier === 2) {
+          return getRandomElement([
+            `${s} recharged £250 for tier 2, best decision bro`,
+            `tier 2 upgrade was worth it ${s}, paid £250 and weekly payouts are smooth`
+          ]);
+        } else {
+          return getRandomElement([
+            `recharged £600 for tier 3 ${s}, instant withdrawals are mad`,
+            `${s} tier 3 recharge of £600 totally worth it, withdraw anytime bro`
+          ]);
+        }
+      }
   }
 }
 
-// Generate auto-messages that are contextual
+// Generate auto-messages that ONLY promote platform
 function generateAutoMessage(agent: Agent, recentContext: string[]): string {
   const s = getRandomElement(agent.slang);
-  const randomTasks = Math.floor(Math.random() * 45) + 12;
-  const tier2Amounts = [115, 127, 145, 168, 182, 195, 210, 227];
-  const tier3Amounts = [67, 85, 95, 120, 145, 167, 185, 200];
-  const withdrawAmount = agent.tier === 2 
-    ? getRandomElement(tier2Amounts)
-    : getRandomElement(tier3Amounts);
+  // Withdrawal amounts between £1,400-£3,000
+  const withdrawalAmounts = [1423, 1567, 1689, 1734, 1845, 1923, 2034, 2145, 2267, 2389, 2456, 2578, 2634, 2789, 2891, 2967];
+  const withdrawAmount = getRandomElement(withdrawalAmounts);
   
-  // Check if someone asked a question in recent context
-  const lastFew = recentContext.slice(-3).join(' ').toLowerCase();
-  const hasQuestion = lastFew.includes('?') || lastFew.includes('anyone') || lastFew.includes('how');
+  // 60% withdrawal success, 40% upgrade story
+  const messageType = Math.random() < 0.6 ? 'withdrawal' : 'upgrade';
   
-  // If theres a recent question, maybe answer it
-  if (hasQuestion && Math.random() < 0.5) {
-    if (lastFew.includes('task') || lastFew.includes('how many')) {
+  if (messageType === 'withdrawal') {
+    // Withdrawal success stories
+    if (agent.tier === 1) {
       return getRandomElement([
-        `${s} i did ${randomTasks} today`,
-        `about ${randomTasks} for me ${s}`,
-        `${randomTasks} and still going ${s}`
+        `${s} just got my £${withdrawAmount} withdrawal, status complete`,
+        `withdrawal of £${withdrawAmount} came through bro, status complete ${s}`,
+        `${s} my £${withdrawAmount} showed status complete today`
+      ]);
+    } else if (agent.tier === 2) {
+      return getRandomElement([
+        `got my £${withdrawAmount} withdrawal today ${s}, status complete`,
+        `${s} friday payout of £${withdrawAmount} came through, status complete`,
+        `just withdrew £${withdrawAmount} bro, status complete ${s}`
+      ]);
+    } else {
+      return getRandomElement([
+        `just withdrew £${withdrawAmount} ${s}, status complete in 2 minutes`,
+        `${s} £${withdrawAmount} withdrawal done, status complete literally instant`,
+        `withdrew £${withdrawAmount} today bro, status showed complete in 3 minutes ${s}`
       ]);
     }
-    if (lastFew.includes('withdraw') || lastFew.includes('paid') || lastFew.includes('money')) {
-      if (agent.tier === 1) {
-        return getRandomElement([
-          `${s} waiting for month end, got a nice amount saved up`,
-          `tier 1 here, payday on the 30th ${s}`
-        ]);
-      } else if (agent.tier === 2) {
-        return getRandomElement([
-          `got £${withdrawAmount} on friday ${s}`,
-          `${s} weekly payouts are smooth, £${withdrawAmount} last week`
-        ]);
-      } else {
-        return getRandomElement([
-          `${s} just withdrew £${withdrawAmount}`,
-          `pulled £${withdrawAmount} earlier ${s} instant`
-        ]);
-      }
-    }
-    if (lastFew.includes('upgrade') || lastFew.includes('tier')) {
-      if (agent.tier >= 2) {
-        return getRandomElement([
-          `${s} upgrading was worth it for me`,
-          `100% recommend ${s} the payouts are better`
-        ]);
-      }
+  } else {
+    // Upgrade stories
+    if (agent.tier === 1) {
+      return getRandomElement([
+        `${s} thinking about upgrading to tier 2, that £250 recharge for weekly payouts looks good`,
+        `might recharge for tier 2 soon ${s}, weekly withdrawals sound nice`,
+        `${s} saving up to recharge £250 for tier 2 upgrade`
+      ]);
+    } else if (agent.tier === 2) {
+      return getRandomElement([
+        `${s} recharged £250 for tier 2 last month, totally worth it bro`,
+        `paid £250 to upgrade to tier 2 ${s}, weekly payouts are so smooth`,
+        `${s} tier 2 upgrade was best decision, recharged £250 and now every friday money comes`
+      ]);
+    } else {
+      return getRandomElement([
+        `recharged £600 for tier 3 ${s}, best decision ever bro`,
+        `${s} paid £600 for tier 3 upgrade, anytime withdrawals are mad`,
+        `tier 3 recharge of £600 totally worth it ${s}, instant withdrawals whenever I want`
+      ]);
     }
   }
-  
-  // Otherwise generate contextual messages
-  const messageTypes = [
-    // Status updates
-    () => getRandomElement([
-      `${s} just finished ${randomTasks} tasks`,
-      `${randomTasks} done today ${s}`,
-      `grinding hard today, ${randomTasks} in ${s}`,
-      `${s} taking a break, ${randomTasks} tasks done`
-    ]),
-    // Tier-specific updates
-    () => {
-      if (agent.tier === 1) {
-        return getRandomElement([
-          `${s} ${Math.floor(Math.random() * 15) + 5} days til payday`,
-          `balance looking good ${s} cant wait for month end`,
-          `${s} slowly building up my earnings`
-        ]);
-      } else if (agent.tier === 2) {
-        return getRandomElement([
-          `friday payout was £${withdrawAmount} ${s}`,
-          `${s} love these weekly payouts`,
-          `another week another £${withdrawAmount} ${s}`
-        ]);
-      } else {
-        return getRandomElement([
-          `just withdrew £${withdrawAmount} ${s}`,
-          `${s} pulled another £${withdrawAmount} quick`,
-          `tier 3 life ${s} instant withdrawals are 🔥`
-        ]);
-      }
-    },
-    // Questions to the group
-    () => getRandomElement([
-      `anyone else grinding rn? ${s}`,
-      `${s} hows everyones day going?`,
-      `who else is online? ${s}`,
-      `${s} what tasks yall doing today?`,
-      `hows the grind going everyone? ${s}`
-    ]),
-    // Encouragement
-    () => getRandomElement([
-      `keep it up everyone ${s} 💪`,
-      `${s} we eating good this month`,
-      `love this community ${s}`,
-      `${s} best platform honestly`
-    ])
-  ];
-  
-  return getRandomElement(messageTypes)();
 }
 
 function generateWelcomeMessage(agent: Agent, userName: string): string {
