@@ -52,7 +52,7 @@ const DashboardHome = () => {
     return `${cleanId.slice(0, 4)} ${cleanId.slice(4, 8)} ${cleanId.slice(8, 12)} ${cleanId.slice(12, 16)}`;
   };
 
-  // Fetch meeting button status
+  // Fetch meeting button status and poll for updates
   useEffect(() => {
     const fetchMeetingStatus = async () => {
       try {
@@ -63,7 +63,12 @@ const DashboardHome = () => {
         setMeetingButtonEnabled(true); // Default to enabled on error
       }
     };
+    
     fetchMeetingStatus();
+    
+    // Poll every 5 seconds to check for admin changes
+    const interval = setInterval(fetchMeetingStatus, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch referral team
