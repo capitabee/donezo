@@ -503,7 +503,14 @@ export async function generateAgentAutoMessage(roomId: string): Promise<any> {
   const roomAgents = await getRoomAgents(roomId);
   if (roomAgents.length === 0) return null;
 
+  // Pick a random AI template but randomize the name
   const randomAgent = roomAgents[Math.floor(Math.random() * roomAgents.length)];
+  
+  // Generate a completely random name from the pool every time
+  const randomName = getRandomElement(firstNames);
+  const randomAvatar = getRandomElement(avatars);
+  const randomAgentId = `agent_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  
   const mood = getRandomElement(moodOptions);
   
   const recentMessages = await getMeetingMessages(roomId, 15);
@@ -557,7 +564,8 @@ Use first person ("I have upgraded...", "I upgraded...") and end with "thank you
     messageContent = generateAutoMessage(randomAgent, context.split('\n'));
   }
   
-  return saveMessage(roomId, 'agent', randomAgent.name, randomAgent.id, messageContent);
+  // Use the random name and ID instead of the template agent's name
+  return saveMessage(roomId, 'agent', randomName, randomAgentId, messageContent);
 }
 
 export async function generateAgentResponses(
@@ -615,6 +623,11 @@ export async function generateAgentResponses(
   
   for (let i = 0; i < respondingAgents.length; i++) {
     const agent = respondingAgents[i];
+    
+    // Generate a random name for this response
+    const randomName = getRandomElement(firstNames);
+    const randomAgentId = `agent_${Date.now()}_${Math.floor(Math.random() * 1000)}_${i}`;
+    
     const mood = getRandomElement(moodOptions);
     const wasMentioned = mentionedAgents.some(a => a.name === agent.name);
     
@@ -672,7 +685,8 @@ Keep it simple, 1-3 sentences.`
       responseContent = generateSmartReply(agent, userMessage, userName, context.split('\n'));
     }
 
-    const savedMessage = await saveMessage(roomId, 'agent', agent.name, agent.id, responseContent);
+    // Use the random name and ID for this response
+    const savedMessage = await saveMessage(roomId, 'agent', randomName, randomAgentId, responseContent);
     responses.push(savedMessage);
   }
 

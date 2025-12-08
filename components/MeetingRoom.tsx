@@ -302,10 +302,18 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ isOpen, onClose, userName, ch
             </div>
           ) : (
             <>
-              {/* System Message */}
-              <div className="flex justify-center">
-                <div className="bg-[#182229] text-gray-400 text-xs px-3 py-1 rounded-lg">
-                  💰 Share your withdrawal success & upgrade stories
+              {/* Admin Pinned Message */}
+              <div className="sticky top-0 z-10 bg-[#0b141a] pb-3">
+                <div className="bg-[#005c4b] rounded-lg p-3 shadow-lg border-l-4 border-green-400">
+                  <div className="flex items-start gap-2">
+                    <div className="text-lg">📌</div>
+                    <div className="flex-1">
+                      <p className="text-white text-sm font-semibold mb-1">Admin - Pinned Message</p>
+                      <p className="text-gray-100 text-xs leading-relaxed">
+                        Please mention only upgrades and withdrawals with status. Thank you.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
