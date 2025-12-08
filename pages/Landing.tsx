@@ -28,33 +28,38 @@ const Landing = () => {
     if (distance < 120) {
       // Calculate dodge direction (away from mouse)
       const angle = Math.atan2(distanceY, distanceX);
-      const dodgeDistance = 150;
+      const dodgeDistance = 120;
+      
+      // Calculate new offset from dodge
       let newX = buttonPosition.x - Math.cos(angle) * dodgeDistance;
       let newY = buttonPosition.y - Math.sin(angle) * dodgeDistance;
       
-      // Calculate what the new button position would be
-      const newButtonLeft = button.left - buttonPosition.x + newX;
-      const newButtonTop = button.top - buttonPosition.y + newY;
-      const newButtonRight = newButtonLeft + button.width;
-      const newButtonBottom = newButtonTop + button.height;
+      // Get the delta change
+      const deltaX = newX - buttonPosition.x;
+      const deltaY = newY - buttonPosition.y;
+      
+      // Calculate where button will be after this move
+      const futureLeft = button.left + deltaX;
+      const futureTop = button.top + deltaY;
+      const futureRight = button.right + deltaX;
+      const futureBottom = button.bottom + deltaY;
       
       // Define safe margins
-      const margin = 30;
+      const margin = 40;
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       
-      // Adjust if it would go out of bounds
-      if (newButtonLeft < margin) {
-        newX += (margin - newButtonLeft);
+      // Clamp to viewport bounds
+      if (futureLeft < margin) {
+        newX = buttonPosition.x + (margin - button.left);
+      } else if (futureRight > viewportWidth - margin) {
+        newX = buttonPosition.x + (viewportWidth - margin - button.right);
       }
-      if (newButtonRight > viewportWidth - margin) {
-        newX -= (newButtonRight - (viewportWidth - margin));
-      }
-      if (newButtonTop < margin) {
-        newY += (margin - newButtonTop);
-      }
-      if (newButtonBottom > viewportHeight - margin) {
-        newY -= (newButtonBottom - (viewportHeight - margin));
+      
+      if (futureTop < margin) {
+        newY = buttonPosition.y + (margin - button.top);
+      } else if (futureBottom > viewportHeight - margin) {
+        newY = buttonPosition.y + (viewportHeight - margin - button.bottom);
       }
       
       setButtonPosition({ x: newX, y: newY });
