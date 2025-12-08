@@ -16,6 +16,7 @@ const Landing = () => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     
+    // Calculate button center with current offset
     const buttonCenterX = button.left + button.width / 2;
     const buttonCenterY = button.top + button.height / 2;
     
@@ -27,19 +28,37 @@ const Landing = () => {
     if (distance < 120) {
       // Calculate dodge direction (away from mouse)
       const angle = Math.atan2(distanceY, distanceX);
-      let dodgeDistance = 150;
+      const dodgeDistance = 150;
       let newX = buttonPosition.x - Math.cos(angle) * dodgeDistance;
       let newY = buttonPosition.y - Math.sin(angle) * dodgeDistance;
       
-      // Get viewport bounds
-      const maxX = window.innerWidth - button.width - 20;
-      const maxY = window.innerHeight - button.height - 20;
-      const minX = -button.left + 20;
-      const minY = -button.top + 20;
+      // Get the button's original position (without offset)
+      const originalLeft = button.left - buttonPosition.x;
+      const originalTop = button.top - buttonPosition.y;
       
-      // Clamp position to stay within viewport
-      newX = Math.max(minX, Math.min(maxX, newX));
-      newY = Math.max(minY, Math.min(maxY, newY));
+      // Calculate where button would be with new offset
+      const newLeft = originalLeft + newX;
+      const newTop = originalTop + newY;
+      const newRight = newLeft + button.width;
+      const newBottom = newTop + button.height;
+      
+      // Define safe margins from screen edges
+      const margin = 20;
+      const maxX = window.innerWidth - margin;
+      const maxY = window.innerHeight - margin;
+      
+      // Clamp to keep button fully within viewport
+      if (newLeft < margin) {
+        newX = margin - originalLeft;
+      } else if (newRight > maxX) {
+        newX = maxX - button.width - originalLeft;
+      }
+      
+      if (newTop < margin) {
+        newY = margin - originalTop;
+      } else if (newBottom > maxY) {
+        newY = maxY - button.height - originalTop;
+      }
       
       setButtonPosition({ x: newX, y: newY });
       
