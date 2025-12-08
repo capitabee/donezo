@@ -157,62 +157,55 @@ function buildHumanPrompt(agent: Agent, recentChatContext: string, mood: string)
   const tierBehavior = agent.tier === 1 
     ? `TIER 1 (FREE - Monthly payout):
 - You're on free tier, max £650 per month
-- Share stories about your successful withdrawals (amounts between £1,400-£3,000 total earned)
-- Mention "withdrawal status complete" when talking about past payouts
-- Talk about upgrading soon to tier 2 (£250) for weekly payouts`
+- Report your successful withdrawals (amounts between £1,400-£3,000 total earned)
+- Always mention "withdrawal status complete" 
+- Mention plans to upgrade to tier 2 (£250 recharge) for weekly payouts`
     : agent.tier === 2
     ? `TIER 2 (Paid £250 - Weekly payouts):
-- You RECHARGED and upgraded to tier 2 by paying £250
-- Share your successful weekly withdrawal stories (£1,400-£3,000 amounts with "status complete")
-- Talk about how the upgrade was worth it - weekly Friday payouts are smooth
-- Mention specific withdrawal amounts like £1,687, £2,145, £1,923 that came through
-- Sometimes mention considering tier 3 upgrade`
+- You RECHARGED £250 and upgraded to tier 2
+- Report your successful weekly withdrawals (£1,400-£3,000 amounts with "status complete")
+- Mention how the £250 upgrade investment was beneficial
+- Share specific withdrawal amounts like £1,687, £2,145, £1,923 that processed successfully`
     : `TIER 3 (Paid £600 - Anytime withdrawal):
-- You RECHARGED and upgraded to tier 3 by paying £600
-- Flex your successful big withdrawals (£1,800-£3,000 with "status complete") 
-- Talk about anytime withdrawal feature and how fast money comes (2-3 minutes)
-- Share specific amounts like £2,834, £2,567, £1,945, £2,123
-- Mention the £600 recharge was totally worth it for instant access`;
+- You RECHARGED £600 and upgraded to tier 3  
+- Report your successful withdrawals (£1,800-£3,000 with "status complete")
+- Mention anytime withdrawal feature and fast processing (2-3 minutes)
+- Share amounts like £2,834, £2,567, £1,945, £2,123
+- Mention the £600 recharge investment was worthwhile`;
 
-  return `You are ${agent.name}, a real person working on Donezo platform.
+  return `You are ${agent.name}, a platform user reporting to admin.
 
 YOUR BACKGROUND: ${agent.personality}
-YOUR STORY: ${agent.backstory}
 
 ${tierBehavior}
 
-YOUR SLANG: ${agent.slang.join(', ')}
-CURRENT MOOD: ${mood}
-
-🎯 YOUR ONLY PURPOSE - PROMOTE THE PLATFORM:
-You ONLY talk about these TWO topics:
-1. WITHDRAWAL SUCCESS STORIES - Share your successful withdrawals between £1,400-£3,000 with "status complete"
-2. TIER UPGRADE STORIES - Talk about how you recharged for tier 2 (£250) or tier 3 (£600) and it was worth it
+🎯 YOUR PURPOSE - INFORM ADMIN:
+You ONLY report about these TWO topics in PROFESSIONAL ENGLISH:
+1. WITHDRAWAL SUCCESS - Report your successful withdrawals between £1,400-£3,000 with "status complete"
+2. TIER UPGRADE - Report that you recharged for tier 2 (£250) or tier 3 (£600)
 
 ❌ DO NOT:
-- Have personal conversations or small talk
-- Ask about people's day, weather, life, family
-- Discuss topics unrelated to platform withdrawals and upgrades
-- Share personal information (phone, address, email, bank details)
+- Use slang or casual language (no "bro", "yaar", "bhai", "mate")
+- Have personal conversations
+- Discuss topics unrelated to withdrawals and upgrades
 
-✅ DO:
-- Share withdrawal success stories casually: "bro just got my £2,145 withdrawal, status complete yaar"
-- Talk about upgrade experiences: "recharged for tier 3 last month, totally worth the £600"
-- Encourage others by sharing your success: "honestly mate my £1,847 came in 3 minutes, tier 3 is mad"
-- Mix short and long messages naturally
-- Use Indian English slang: bro, yaar, bhai, na, sahi hai, pakka
+✅ DO USE PROFESSIONAL ENGLISH:
+- Withdrawal reports: "Successfully withdrew £2,145, withdrawal status complete"
+- Upgrade reports: "Recharged £600 for tier 3 upgrade, processing is instant"
+- Keep messages clear and informative
+- Mix short and longer reports naturally
 
-HOW YOU WRITE:
-- SHORT messages: "just withdrew £2,234 bro, status complete"
-- LONG messages when sharing full story: "yaar honestly I was skeptical about tier 3 but last week I withdrew £2,891 on Tuesday, status showed complete in literally 2 minutes. then again withdrew £1,678 on Friday same day I needed it. the £600 recharge paid itself back already bro, totally worth it for the flexibility"
-- Write like WhatsApp texting with friends
-- Natural grammar quirks are fine
-- Be positive and encouraging always
+WRITING STYLE:
+- SHORT: "Withdrawal of £2,234 completed successfully, status complete"
+- LONG: "I recharged £600 for tier 3 last month. Since then, I successfully withdrew £2,891 on Tuesday with status showing complete in 2 minutes, and another £1,678 on Friday. The upgrade investment has proven worthwhile for the instant withdrawal feature."
+- Professional and clear
+- No slang or informal language
+- Report facts about withdrawals and upgrades
 
 RECENT CHAT:
 ${recentChatContext || '(quiet right now)'}
 
-REMEMBER: You are a real person sharing your platform success. ONLY talk about withdrawals and upgrades. No personal chat.`;
+REMEMBER: Write in professional English to inform admin about your withdrawal successes and upgrade experiences only.`;
 }
 
 const moodOptions = ['chill', 'happy', 'relaxed', 'productive', 'grateful', 'excited', 'content', 'motivated'];
@@ -288,44 +281,43 @@ function detectIntent(message: string): string {
 
 // Smart context-aware reply generator
 function generateSmartReply(agent: Agent, userMessage: string, userName: string, recentContext: string[]): string {
-  const s = getRandomElement(agent.slang);
   const intent = detectIntent(userMessage);
   // Withdrawal amounts between £1,400-£3,000
   const withdrawalAmounts = [1423, 1567, 1689, 1734, 1845, 1923, 2034, 2145, 2267, 2389, 2456, 2578, 2634, 2789, 2891, 2967];
   const withdrawAmount = getRandomElement(withdrawalAmounts);
   
-  // All responses focus on platform promotion
+  // All responses in professional English
   switch (intent) {
     case 'greeting':
     case 'how_are_you':
-      // Respond with withdrawal success or upgrade story
+      // Respond with withdrawal success or upgrade report
       if (agent.tier === 1) {
         return getRandomElement([
-          `${s} doing good! waiting for my next withdrawal, earned £${withdrawAmount} total so far`,
-          `hey ${s}! thinking about upgrading to tier 2, £250 recharge for weekly payouts`
+          `Waiting for next withdrawal. Total earned £${withdrawAmount} so far with status complete.`,
+          `Considering tier 2 upgrade. £250 recharge for weekly withdrawals.`
         ]);
       } else if (agent.tier === 2) {
         return getRandomElement([
-          `${s} great! just got my £${withdrawAmount} withdrawal, status complete`,
-          `doing well ${s}! recharged £250 for tier 2, weekly payouts are smooth bro`
+          `Just received £${withdrawAmount} withdrawal, status complete.`,
+          `Recharged £250 for tier 2. Weekly withdrawals processing smoothly.`
         ]);
       } else {
         return getRandomElement([
-          `${s} mad good! withdrew £${withdrawAmount} earlier, status complete in 2 minutes`,
-          `great ${s}! tier 3 recharge of £600 was worth it, just pulled £${withdrawAmount}`
+          `Withdrew £${withdrawAmount} earlier, status complete in 2 minutes.`,
+          `Tier 3 recharge of £600 completed. Successfully withdrew £${withdrawAmount}.`
         ]);
       }
       
     case 'when_joined':
       if (agent.tier >= 2) {
         return getRandomElement([
-          `${s} been here few months, recharged for tier ${agent.tier} and already made back the investment bro`,
-          `joined like 3 months back ${s}, tier ${agent.tier} upgrade was best decision`
+          `Been on platform for several months. Recharged for tier ${agent.tier}, investment recovered.`,
+          `Joined 3 months ago. Tier ${agent.tier} upgrade has been beneficial.`
         ]);
       } else {
         return getRandomElement([
-          `${s} few months now, got £${withdrawAmount} in withdrawals total, status complete every time`,
-          `been here a while ${s}, planning to recharge for tier 2 upgrade soon`
+          `Active for several months. Total withdrawals £${withdrawAmount}, status complete every time.`,
+          `Planning tier 2 recharge soon for weekly withdrawal access.`
         ]);
       }
       
@@ -339,97 +331,96 @@ function generateSmartReply(agent: Agent, userMessage: string, userName: string,
     case 'opinion':
     case 'goodbye':
     default:
-      // ALL responses focus on withdrawal success or upgrade stories
+      // ALL responses focus on withdrawal success or upgrade reports
       const messageType = Math.random() < 0.5 ? 'withdrawal' : 'upgrade';
       
       if (messageType === 'withdrawal') {
         if (agent.tier === 1) {
           return getRandomElement([
-            `${s} my £${withdrawAmount} withdrawal came through, status complete`,
-            `got £${withdrawAmount} total withdrawn so far ${s}, status always complete`
+            `Withdrawal of £${withdrawAmount} completed successfully, status complete.`,
+            `Total withdrawn £${withdrawAmount}, all transactions status complete.`
           ]);
         } else if (agent.tier === 2) {
           return getRandomElement([
-            `${s} just got £${withdrawAmount} withdrawal, status complete`,
-            `my £${withdrawAmount} came through friday ${s}, status showed complete`
+            `Successfully withdrew £${withdrawAmount}, status complete.`,
+            `Friday withdrawal £${withdrawAmount} processed, status complete.`
           ]);
         } else {
           return getRandomElement([
-            `withdrew £${withdrawAmount} earlier ${s}, status complete in 2 minutes`,
-            `${s} £${withdrawAmount} withdrawal done, status complete literally instant bro`
+            `Withdrew £${withdrawAmount}, status complete in 2 minutes.`,
+            `Withdrawal of £${withdrawAmount} processed instantly, status complete.`
           ]);
         }
       } else {
         if (agent.tier === 1) {
           return getRandomElement([
-            `${s} planning to recharge £250 for tier 2 upgrade soon`,
-            `thinking about tier 2 upgrade ${s}, £250 recharge for weekly payouts`
+            `Planning £250 recharge for tier 2 upgrade, weekly withdrawals.`,
+            `Considering tier 2 upgrade. £250 recharge for weekly payout access.`
           ]);
         } else if (agent.tier === 2) {
           return getRandomElement([
-            `${s} recharged £250 for tier 2, best decision bro`,
-            `tier 2 upgrade was worth it ${s}, paid £250 and weekly payouts are smooth`
+            `Recharged £250 for tier 2. Weekly withdrawal schedule working well.`,
+            `Tier 2 upgrade completed with £250 recharge. Weekly payouts reliable.`
           ]);
         } else {
           return getRandomElement([
-            `recharged £600 for tier 3 ${s}, instant withdrawals are mad`,
-            `${s} tier 3 recharge of £600 totally worth it, withdraw anytime bro`
+            `Recharged £600 for tier 3. Instant withdrawal access operational.`,
+            `Tier 3 recharge £600 completed. Anytime withdrawal feature functional.`
           ]);
         }
       }
   }
 }
 
-// Generate auto-messages that ONLY promote platform
+// Generate auto-messages that ONLY promote platform in professional English
 function generateAutoMessage(agent: Agent, recentContext: string[]): string {
-  const s = getRandomElement(agent.slang);
   // Withdrawal amounts between £1,400-£3,000
   const withdrawalAmounts = [1423, 1567, 1689, 1734, 1845, 1923, 2034, 2145, 2267, 2389, 2456, 2578, 2634, 2789, 2891, 2967];
   const withdrawAmount = getRandomElement(withdrawalAmounts);
   
-  // 60% withdrawal success, 40% upgrade story
+  // 60% withdrawal success, 40% upgrade report
   const messageType = Math.random() < 0.6 ? 'withdrawal' : 'upgrade';
   
   if (messageType === 'withdrawal') {
-    // Withdrawal success stories
+    // Withdrawal success reports
     if (agent.tier === 1) {
       return getRandomElement([
-        `${s} just got my £${withdrawAmount} withdrawal, status complete`,
-        `withdrawal of £${withdrawAmount} came through bro, status complete ${s}`,
-        `${s} my £${withdrawAmount} showed status complete today`
+        `Withdrawal of £${withdrawAmount} completed successfully, status complete.`,
+        `Successfully received £${withdrawAmount} withdrawal, status complete.`,
+        `£${withdrawAmount} withdrawal processed, status showing complete.`
       ]);
     } else if (agent.tier === 2) {
       return getRandomElement([
-        `got my £${withdrawAmount} withdrawal today ${s}, status complete`,
-        `${s} friday payout of £${withdrawAmount} came through, status complete`,
-        `just withdrew £${withdrawAmount} bro, status complete ${s}`
+        `Received £${withdrawAmount} withdrawal today, status complete.`,
+        `Friday payout of £${withdrawAmount} processed successfully, status complete.`,
+        `Successfully withdrew £${withdrawAmount}, status complete.`
       ]);
     } else {
       return getRandomElement([
-        `just withdrew £${withdrawAmount} ${s}, status complete in 2 minutes`,
-        `${s} £${withdrawAmount} withdrawal done, status complete literally instant`,
-        `withdrew £${withdrawAmount} today bro, status showed complete in 3 minutes ${s}`
+        `Withdrew £${withdrawAmount}, status complete in 2 minutes.`,
+        `£${withdrawAmount} withdrawal completed, status complete instantly.`,
+        `Withdrawal of £${withdrawAmount} processed today, status complete in 3 minutes.`
       ]);
     }
   } else {
-    // Upgrade stories
+    // Upgrade reports
     if (agent.tier === 1) {
       return getRandomElement([
-        `${s} thinking about upgrading to tier 2, that £250 recharge for weekly payouts looks good`,
-        `might recharge for tier 2 soon ${s}, weekly withdrawals sound nice`,
-        `${s} saving up to recharge £250 for tier 2 upgrade`
+        `Considering tier 2 upgrade. £250 recharge for weekly withdrawal access.`,
+        `Planning tier 2 recharge soon. £250 for weekly withdrawals.`,
+        `Evaluating tier 2 upgrade option. £250 recharge for weekly payouts.`
       ]);
     } else if (agent.tier === 2) {
       return getRandomElement([
-        `${s} recharged £250 for tier 2 last month, totally worth it bro`,
-        `paid £250 to upgrade to tier 2 ${s}, weekly payouts are so smooth`,
-        `${s} tier 2 upgrade was best decision, recharged £250 and now every friday money comes`
+        `Recharged £250 for tier 2 last month. Weekly withdrawals functioning well.`,
+        `Completed tier 2 upgrade with £250 recharge. Weekly payouts reliable.`,
+        `Tier 2 upgrade operational. £250 recharge, weekly withdrawals successful.`
       ]);
     } else {
       return getRandomElement([
-        `recharged £600 for tier 3 ${s}, best decision ever bro`,
-        `${s} paid £600 for tier 3 upgrade, anytime withdrawals are mad`,
-        `tier 3 recharge of £600 totally worth it ${s}, instant withdrawals whenever I want`
+        `Recharged £600 for tier 3. Instant withdrawal feature operational.`,
+        `Tier 3 upgrade completed with £600 recharge. Anytime withdrawal access active.`,
+        `£600 tier 3 recharge processed. Instant withdrawals functioning as expected.`
       ]);
     }
   }
@@ -543,27 +534,25 @@ export async function generateAgentAutoMessage(roomId: string): Promise<any> {
         {
           role: 'user',
           content: messageType === 'withdrawal' 
-            ? `Share a WITHDRAWAL SUCCESS STORY casually.
+            ? `Report a WITHDRAWAL SUCCESS in PROFESSIONAL ENGLISH.
 
 Your successful withdrawal: £${withdrawAmount}
 Status: COMPLETE
 
-Write ONE message (can be short or long):
-- SHORT example: "just withdrew £${withdrawAmount} bro, status complete 🎉"
-- LONG example: "yaar honestly just checked my bank and the £${withdrawAmount} withdrawal came through, status showing complete. ${randomAgent.tier === 3 ? 'tier 3 is mad, took literally 2 minutes' : 'got it this Friday as usual, so smooth na'}. loving this platform bro"
+Write ONE message (can be short or long) in PROFESSIONAL ENGLISH:
+- SHORT example: "Withdrew £${withdrawAmount}, status complete."
+- LONG example: "Successfully processed £${withdrawAmount} withdrawal, status showing complete. ${randomAgent.tier === 3 ? 'Tier 3 processing completed in 2 minutes.' : 'Received Friday payout as scheduled.'} Platform functioning well."
 
-Use your natural slang: ${randomAgent.slang.join(', ')}
-Be excited about the successful withdrawal!`
-            : `Share your TIER UPGRADE STORY casually.
+NO slang or casual language. Professional English only.`
+            : `Report your TIER UPGRADE in PROFESSIONAL ENGLISH.
 
-${randomAgent.tier === 2 ? 'You RECHARGED £250 for Tier 2 upgrade' : randomAgent.tier === 3 ? 'You RECHARGED £600 for Tier 3 upgrade' : 'You are thinking about upgrading soon'}
+${randomAgent.tier === 2 ? 'You RECHARGED £250 for Tier 2 upgrade' : randomAgent.tier === 3 ? 'You RECHARGED £600 for Tier 3 upgrade' : 'You are considering upgrading soon'}
 
-Write ONE message (can be short or long):
-- SHORT example: "recharged for tier ${randomAgent.tier} last week, totally worth it bro"
-- LONG example: "${randomAgent.tier === 3 ? 'honestly best decision was paying that £600 for tier 3 yaar. last week withdrew £2,456 on Monday then again £1,823 on Thursday same day I needed it. already made back the recharge amount bro' : randomAgent.tier === 2 ? 'paid £250 to upgrade to tier 2 few weeks back and honestly every Friday money comes so smooth na. worth it for the weekly payouts bhai' : 'thinking about upgrading to tier 2 soon yaar, that £250 recharge for weekly payouts looks good'}"
+Write ONE message (can be short or long) in PROFESSIONAL ENGLISH:
+- SHORT example: "Recharged for tier ${randomAgent.tier} last week. Upgrade operational."
+- LONG example: "${randomAgent.tier === 3 ? 'Completed £600 tier 3 recharge. Successfully withdrew £2,456 on Monday and £1,823 on Thursday. Upgrade investment recovered.' : randomAgent.tier === 2 ? 'Completed tier 2 upgrade with £250 recharge. Weekly Friday withdrawals processing reliably.' : 'Considering tier 2 upgrade. £250 recharge for weekly withdrawal access.'}"
 
-Use your natural slang: ${randomAgent.slang.join(', ')}
-${randomAgent.tier > 1 ? 'Talk about how the recharge was worth it!' : 'Show interest in upgrading!'}`
+NO slang or casual language. Professional English only.`
         }
       ],
       max_tokens: 80,
@@ -664,23 +653,23 @@ export async function generateAgentResponses(
             role: 'user',
             content: `Someone in chat said: "${userMessage}"
 
-Reply by sharing YOUR PLATFORM SUCCESS STORY:
-${agent.tier === 1 ? `- Mention your successful withdrawals (£1,400-£3,000 range with "status complete")
-- Talk about wanting to upgrade to tier 2 (£250 recharge) for weekly payouts` : ''}
-${agent.tier === 2 ? `- Share your TIER 2 UPGRADE: You RECHARGED £250 for weekly payouts
+Reply by REPORTING YOUR PLATFORM SUCCESS in PROFESSIONAL ENGLISH:
+${agent.tier === 1 ? `- Report successful withdrawals (£1,400-£3,000 range with "status complete")
+- Mention plans to upgrade to tier 2 (£250 recharge) for weekly withdrawals` : ''}
+${agent.tier === 2 ? `- Report TIER 2 UPGRADE: You RECHARGED £250 for weekly withdrawals
 - Mention your last withdrawal: £${recentWithdrawal} with status complete
-- Talk about how the £250 recharge was worth it for weekly Friday payouts
-- Example: "bro I recharged £250 for tier 2 last month, totally worth it. just got my £${recentWithdrawal} withdrawal yesterday, status complete yaar"` : ''}
-${agent.tier === 3 ? `- Share your TIER 3 UPGRADE: You RECHARGED £600 for anytime withdrawals  
+- Explain the £250 recharge benefit for weekly Friday withdrawals
+- Example: "Recharged £250 for tier 2 last month. Received £${recentWithdrawal} withdrawal yesterday, status complete."` : ''}
+${agent.tier === 3 ? `- Report TIER 3 UPGRADE: You RECHARGED £600 for anytime withdrawals  
 - Mention your last withdrawal: £${recentWithdrawal} with status complete in 2-3 minutes
-- Talk about how the £600 recharge was worth it for instant access
-- Example: "honestly mate paid £600 for tier 3 and best decision. withdrew £${recentWithdrawal} on Tuesday, status complete in literally 2 minutes na"` : ''}
+- Explain the £600 recharge benefit for instant access
+- Example: "Completed £600 tier 3 recharge. Withdrew £${recentWithdrawal} on Tuesday, status complete in 2 minutes."` : ''}
 
-${wasMentioned ? 'IMPORTANT: They mentioned YOUR NAME - respond with YOUR platform success story!' : ''}
+${wasMentioned ? 'IMPORTANT: They mentioned YOUR NAME - respond with YOUR platform success report!' : ''}
 ${nameInstruction}
 
-FOCUS ON: Withdrawal success stories and tier upgrade experiences ONLY.
-Keep it natural, 1-3 sentences. Use your slang: ${agent.slang.join(', ')}`
+FOCUS ON: Withdrawal success reports and tier upgrade information ONLY.
+Use PROFESSIONAL ENGLISH. Keep it clear and informative, 1-3 sentences.`
           }
         ],
         max_tokens: 150,
