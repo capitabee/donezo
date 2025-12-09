@@ -1,20 +1,32 @@
 import React, { useState } from 'react';
 import { Play, CheckCircle, ExternalLink, Youtube, Instagram, Music2, Loader2, Moon, Sun, Lock, AlertTriangle, XCircle, Send, Sparkles } from 'lucide-react';
-import { Task } from '../types';
+import { Task, UserTier } from '../types';
 
 interface TaskCardProps {
   task: Task;
+  userTier?: UserTier;
   onStart: (taskId: string, url: string) => void;
   onSubmit: (taskId: string) => Promise<{ success: boolean; message: string; earnings?: number }>;
   onFail: (taskId: string) => void;
   key?: string;
 }
 
-const TaskCard = ({ task, onStart, onSubmit, onFail }: TaskCardProps) => {
+const getTierMultiplier = (tier?: UserTier): number => {
+  switch (tier) {
+    case 'Professional': return 2.3;
+    case 'Expert': return 4.6;
+    case 'Basic':
+    default: return 1;
+  }
+};
+
+const TaskCard = ({ task, userTier, onStart, onSubmit, onFail }: TaskCardProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
   
-  const taskPayout = Number(task.payout) || 0;
+  const basePayout = Number(task.payout) || 0;
+  const tierMultiplier = getTierMultiplier(userTier);
+  const taskPayout = basePayout * tierMultiplier;
   const isNight = task.category === 'Night';
   const isLocked = task.status === 'Locked';
   const isFailed = task.status === 'Failed';

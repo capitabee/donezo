@@ -140,6 +140,7 @@ const Tasks = () => {
             <TaskCard
               key={task.id}
               task={task}
+              userTier={user?.tier}
               onStart={startTask}
               onSubmit={handleSubmitTask}
               onFail={failTask}

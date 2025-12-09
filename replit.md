@@ -20,7 +20,7 @@ The system employs a dual-server architecture with a React frontend (Vite, TypeS
 
 ### Feature Specifications
 
-*   **Task Management:** Admin-published tasks are displayed to users, with real-time synchronization. An "Add Task" button is exclusively available and functional for Expert tier users.
+*   **Task Management:** Admin-published tasks are displayed to users, with real-time synchronization. An "Add Task" button is exclusively available and functional for Expert tier users. **Dynamic Tier-Based Pricing:** Task rewards automatically scale based on user tier - Basic (1x), Professional (2.3x), Expert (4.6x) multipliers. Admin sets a base price, and each user sees their tier-adjusted reward.
 *   **User Management & Tiers:** A multi-step onboarding process includes job offer acceptance, TrueLayer bank connection, and Stripe debit card mandate setup. Users are assigned to Basic, Professional, or Expert tiers, each with distinct earning caps, payout frequencies, and multipliers.
 *   **Referral System:** Users receive unique referral codes, earning a £50 bonus for successful referrals upon onboarding completion.
 *   **Real-time Dashboard:** Displays live data for referral teams, weekly progress, activity charts, and completed tasks.
