@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    // Use environment variable for backend URL, fallback to localhost for dev
+    const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:3001';
+    
     return {
       server: {
         port: 5000,
@@ -11,11 +14,11 @@ export default defineConfig(({ mode }) => {
         allowedHosts: true,
         proxy: {
           '/api': {
-            target: 'http://localhost:3001',
+            target: backendUrl,
             changeOrigin: true,
           },
           '/truelayer': {
-            target: 'http://localhost:3001',
+            target: backendUrl,
             changeOrigin: true,
           },
         },

@@ -27,6 +27,7 @@ import stripeService from './services/stripeService';
 import openaiService from './services/openaiService';
 import truelayerService from './services/truelayerService';
 import * as meetingService from './services/meetingService';
+import { config, getBaseUrl } from './config';
 
 const usePostgres = isPostgresConfigured() && !isSupabaseConfigured();
 console.log(`Database mode: ${usePostgres ? 'PostgreSQL' : isSupabaseConfigured() ? 'Supabase' : 'Mock/Fallback'}`);
@@ -39,10 +40,16 @@ const apiKeyService = usePostgres ? pgApiKeyService : supabaseApiKeyService;
 const adminMessageService = usePostgres ? pgAdminMessageService : supabaseAdminMessageService;
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.SESSION_SECRET || 'donezo-secret-key';
+const PORT = config.port;
+const JWT_SECRET = config.jwtSecret;
 
-app.use(cors());
+// CORS configuration
+app.use(cors({
+  origin: config.corsOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -59,9 +66,7 @@ app.get("/truelayer/callback", async (req, res) => {
   }
 
   try {
-    const baseUrl = process.env.REPLIT_DOMAINS ? 
-      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
-      'http://localhost:5000';
+    const baseUrl = getBaseUrl();
     
     console.log("TrueLayer token exchange - redirect_uri:", `${baseUrl}/truelayer/callback`);
     
@@ -370,9 +375,7 @@ app.get('/api/referral/info', authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const baseUrl = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-      : 'http://localhost:5000';
+    const baseUrl = getBaseUrl();
 
     res.json({
       referralCode: (user as any).referral_code,
@@ -801,9 +804,7 @@ app.post('/api/upgrade', authenticateToken, async (req: any, res) => {
       }
     }
 
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-      : 'http://localhost:5000';
+    const baseUrl = getBaseUrl();
 
     const session = await stripeService.createCheckoutSession(
       user.stripe_customer_id!,
@@ -871,9 +872,7 @@ app.post('/api/billing/mandate/setup', authenticateToken, async (req: any, res) 
       }
     }
 
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-      : 'http://localhost:5000';
+    const baseUrl = getBaseUrl();
 
     const setupIntent = await stripeService.createSetupIntent(user.stripe_customer_id!);
     
@@ -1318,9 +1317,7 @@ app.get('/api/truelayer/auth-url', authenticateToken, async (req: any, res) => {
       return res.status(503).json({ error: 'TrueLayer is not configured' });
     }
 
-    const baseUrl = process.env.REPLIT_DOMAINS ? 
-      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
-      'http://localhost:5000';
+    const baseUrl = getBaseUrl();
     // Use simple callback path
     const redirectUri = `${baseUrl}/truelayer/callback`;
     // Include user ID and isOnboarding flag in state for token storage
@@ -1337,9 +1334,7 @@ app.get('/api/truelayer/auth-url', authenticateToken, async (req: any, res) => {
 
 // TrueLayer OAuth callback - receives form_post from TrueLayer
 app.post('/api/truelayer/oauth-callback', async (req, res) => {
-  const baseUrl = process.env.REPLIT_DOMAINS ? 
-    `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
-    'http://localhost:5000';
+  const baseUrl = getBaseUrl();
   
   try {
     const { code, state, error: authError } = req.body;
@@ -1393,9 +1388,7 @@ app.post('/api/truelayer/oauth-callback', async (req, res) => {
 
 // Handle GET for OAuth callback (response_mode: query)
 app.get('/api/truelayer/oauth-callback', async (req, res) => {
-  const baseUrl = process.env.REPLIT_DOMAINS ? 
-    `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
-    'http://localhost:5000';
+  const baseUrl = getBaseUrl();
   
   // Check for error from TrueLayer
   const authError = req.query.error as string;
@@ -1470,9 +1463,7 @@ app.post('/api/truelayer/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid state' });
     }
 
-    const baseUrl = process.env.REPLIT_DOMAINS ? 
-      `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
-      'http://localhost:5000';
+    const baseUrl = getBaseUrl();
     const redirectUri = `${baseUrl}/api/truelayer/oauth-callback`;
 
     const tokens = await truelayerService.exchangeCode(code, redirectUri);
@@ -1733,8 +1724,8 @@ app.get('/api/settings/maintenance', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend server running on port ${PORT} (0.0.0.0)`);
 });
 
 export default app;

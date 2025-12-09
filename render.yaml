@@ -1,0 +1,50 @@
+# Render Blueprint Configuration
+# This file configures your backend service for Render deployment
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: donezo-backend
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npx tsx backend/src/server.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: BASE_URL
+        sync: false  # Set this in Render dashboard to your Render service URL
+      - key: FRONTEND_URL
+        sync: false  # Set this in Render dashboard to your Vercel frontend URL
+      - key: SESSION_SECRET
+        generateValue: true  # Render will generate a secure secret
+      - key: DATABASE_URL
+        sync: false  # Set this to your PostgreSQL database URL
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: TRUELAYER_CLIENT_ID
+        sync: false
+      - key: TRUELAYER_CLIENT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+
+databases:
+  - name: donezo-db
+    plan: starter
+    databaseName: donezo
+    user: donezo_user

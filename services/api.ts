@@ -1,4 +1,7 @@
-const API_BASE_URL = '/api';
+// Use environment variable for backend URL, fallback to relative path for dev
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
+  : '/api';
 
 class ApiService {
   private token: string | null = null;
