@@ -28,7 +28,9 @@ The system employs a dual-server architecture with a React frontend (Vite, TypeS
 *   **AI Personalities:** AI users have randomized UK and Indian names (James, Sophie, Rahul, Priya, Jack, Sneha, etc.) that change with each message. They ONLY report their own withdrawal successes and upgrade actions directly to admin, no casual chatting. Messages are direct, grateful reports using first person and thanking admin.
 *   **Payment & Banking:** Integration with TrueLayer for UK Open Banking enables bank account connections, balance fetching, and automatic token refresh. Stripe handles debit card mandates, payment processing for tier upgrades, and allows admins to charge users.
 *   **Security:** Password change functionality with current password verification, strong password validation, and automatic logout.
-*   **Admin Panel:** Provides user management, broadcast messaging, custom task publishing, and one-click API key replacement.
+*   **Admin Panel:** Provides user management, broadcast messaging, custom task publishing, one-click API key replacement, and platform settings including maintenance mode toggle.
+*   **Maintenance Mode:** Admin can toggle maintenance mode from Settings panel. When enabled, all users (except admin) see a beautiful "Under Maintenance" page with animated elements, reassuring users that their data is safe and the site will return shortly. Admin panel remains accessible to manage the site.
+*   **Landing Page:** Features a playful "Onboard" button that dodges the mouse cursor (moves anywhere within the visible screen area) and returns to its original position after 7 seconds of inactivity.
 
 ### System Design Choices
 

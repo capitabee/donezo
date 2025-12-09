@@ -340,6 +340,10 @@ class ApiService {
   async getMeetingButtonStatus() {
     return this.request('/settings/meeting-button');
   }
+
+  async getMaintenanceStatus() {
+    return this.request('/settings/maintenance');
+  }
 }
 
 export const api = new ApiService();

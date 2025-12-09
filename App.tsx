@@ -1,5 +1,5 @@
 import React, { useState, ReactElement, useEffect, useCallback, useRef } from 'react';
-import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
+import { HashRouter, Routes, Route, Outlet, Navigate, useOutletContext, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Sidebar from './components/Sidebar';
@@ -18,6 +18,7 @@ import NotificationPopup from './components/NotificationPopup';
 import SignUp from './pages/SignUp';
 import SignIn from './pages/SignIn';
 import Onboarding from './pages/Onboarding';
+import Maintenance from './pages/Maintenance';
 import { User, UserTier, AdminMessage, AdminMessageType, DashboardOutletContext, Task, TaskCategory, TaskStatus } from './types';
 import api from './services/api';
 
@@ -765,6 +766,45 @@ const Mandate = () => {
   );
 };
 
+const MaintenanceWrapper = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
+
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      try {
+        const result = await api.getMaintenanceStatus();
+        setMaintenanceMode(result.maintenance_mode || false);
+      } catch (error) {
+        console.error('Failed to check maintenance mode:', error);
+        setMaintenanceMode(false);
+      } finally {
+        setCheckingMaintenance(false);
+      }
+    };
+
+    checkMaintenanceMode();
+    const interval = setInterval(checkMaintenanceMode, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (checkingMaintenance) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-700"></div>
+      </div>
+    );
+  }
+
+  const isAdminRoute = location.pathname === '/admin' || window.location.hash === '#/admin';
+  if (maintenanceMode && !isAdminRoute) {
+    return <Maintenance />;
+  }
+
+  return <>{children}</>;
+};
+
 const App = () => {
   const [adminMessages, setAdminMessages] = useState<AdminMessage[]>(() => {
     const savedMessages = localStorage.getItem('donezoAdminMessages');
@@ -787,25 +827,27 @@ const App = () => {
 
   return (
     <HashRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/mandate" element={<Mandate />} />
-        <Route path="/mandate-setup" element={<Mandate />} />
-        <Route path="/truelayer-callback" element={<TrueLayerCallback />} />
-        <Route path="/admin" element={<Admin onSendAdminMessage={addAdminMessageFromAdmin} />} />
+      <MaintenanceWrapper>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/mandate" element={<Mandate />} />
+          <Route path="/mandate-setup" element={<Mandate />} />
+          <Route path="/truelayer-callback" element={<TrueLayerCallback />} />
+          <Route path="/admin" element={<Admin onSendAdminMessage={addAdminMessageFromAdmin} />} />
 
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardHome />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="upgrade" element={<Upgrade />} />
-          <Route path="earnings" element={<Earnings />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="support" element={<Support />} />
-        </Route>
-      </Routes>
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<DashboardHome />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="upgrade" element={<Upgrade />} />
+            <Route path="earnings" element={<Earnings />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="support" element={<Support />} />
+          </Route>
+        </Routes>
+      </MaintenanceWrapper>
     </HashRouter>
   );
 };

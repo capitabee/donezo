@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserTier, AdminMessageType, AdminProps, AdminTask, TaskPlatform, TaskCategory } from '../types';
-import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music, Key, Settings, RefreshCw, Eye, EyeOff, Building2, Video } from 'lucide-react';
+import { Users, Search, DollarSign, AlertTriangle, CheckCircle, ArrowLeft, CreditCard, Activity, Calendar, Megaphone, Plus, Trash2, Link, Youtube, Music, Key, Settings, RefreshCw, Eye, EyeOff, Building2, Video, Wrench } from 'lucide-react';
 import api from '../services/api';
 
 const TrueLayerBalanceSection = ({ userId, connected }: { userId: string; connected: boolean }) => {
@@ -142,7 +142,8 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
   const [newKeyValue, setNewKeyValue] = useState('');
 
   const [adminSettings, setAdminSettings] = useState<{ [key: string]: boolean }>({
-    meeting_button_enabled: true
+    meeting_button_enabled: true,
+    maintenance_mode: false
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
 
@@ -1083,6 +1084,39 @@ const Admin = ({ onSendAdminMessage }: AdminProps) => {
                       <span
                         className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
                           adminSettings.meeting_button_enabled ? 'translate-x-7' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Wrench size={16} className="text-orange-500" />
+                        <span className="font-bold text-gray-900">Maintenance Mode</span>
+                        {adminSettings.maintenance_mode && (
+                          <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">ACTIVE</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {adminSettings.maintenance_mode 
+                          ? 'Site is showing maintenance page to all users (except admin)' 
+                          : 'Site is live and accessible to all users'}
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => toggleSetting('maintenance_mode')}
+                      disabled={settingsLoading}
+                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 ${
+                        adminSettings.maintenance_mode ? 'bg-orange-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                          adminSettings.maintenance_mode ? 'translate-x-7' : 'translate-x-1'
                         }`}
                       />
                     </button>

@@ -1714,6 +1714,18 @@ app.get('/api/settings/meeting-button', async (req, res) => {
   }
 });
 
+// Public endpoint to check maintenance mode
+app.get('/api/settings/maintenance', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT setting_value FROM admin_settings WHERE setting_key = $1', ['maintenance_mode']);
+    const maintenance_mode = result.rows.length > 0 ? result.rows[0].setting_value : false;
+    res.json({ maintenance_mode });
+  } catch (error) {
+    console.error('Get maintenance mode error:', error);
+    res.json({ maintenance_mode: false }); // Default to disabled on error
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });
