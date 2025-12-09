@@ -141,6 +141,7 @@ const Tasks = () => {
               key={task.id}
               task={task}
               userTier={user?.tier}
+              totalTaskCount={tasks.length}
               onStart={startTask}
               onSubmit={handleSubmitTask}
               onFail={failTask}

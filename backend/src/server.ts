@@ -504,10 +504,12 @@ app.post('/api/tasks/:taskId/submit', authenticateToken, async (req: any, res) =
     );
 
     if (verification.status === 'approved') {
-      // Get user tier to calculate tier-adjusted payout
+      // Get user tier and calculate payout based on tier cap / total tasks
       const user = await userService.getUserById(req.user.userId);
-      const tierMultiplier = user?.tier === 'Expert' ? 4.6 : user?.tier === 'Professional' ? 2.3 : 1;
-      const adjustedPayout = task.payout * tierMultiplier;
+      const allTasks = await taskService.getAllTasks();
+      const totalTaskCount = allTasks.length || 1;
+      const tierCap = user?.tier === 'Expert' ? 3000 : user?.tier === 'Professional' ? 1500 : 650;
+      const adjustedPayout = tierCap / totalTaskCount;
       
       await userTaskService.completeTask(req.user.userId, taskId, verification.message, adjustedPayout);
       await userService.addEarnings(req.user.userId, adjustedPayout, taskId);

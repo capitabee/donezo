@@ -5,28 +5,28 @@ import { Task, UserTier } from '../types';
 interface TaskCardProps {
   task: Task;
   userTier?: UserTier;
+  totalTaskCount?: number;
   onStart: (taskId: string, url: string) => void;
   onSubmit: (taskId: string) => Promise<{ success: boolean; message: string; earnings?: number }>;
   onFail: (taskId: string) => void;
   key?: string;
 }
 
-const getTierMultiplier = (tier?: UserTier): number => {
+const getTierCap = (tier?: UserTier): number => {
   switch (tier) {
-    case 'Professional': return 2.3;
-    case 'Expert': return 4.6;
+    case 'Professional': return 1500;
+    case 'Expert': return 3000;
     case 'Basic':
-    default: return 1;
+    default: return 650;
   }
 };
 
-const TaskCard = ({ task, userTier, onStart, onSubmit, onFail }: TaskCardProps) => {
+const TaskCard = ({ task, userTier, totalTaskCount = 1, onStart, onSubmit, onFail }: TaskCardProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
   
-  const basePayout = Number(task.payout) || 0;
-  const tierMultiplier = getTierMultiplier(userTier);
-  const taskPayout = basePayout * tierMultiplier;
+  const tierCap = getTierCap(userTier);
+  const taskPayout = totalTaskCount > 0 ? tierCap / totalTaskCount : 0;
   const isNight = task.category === 'Night';
   const isLocked = task.status === 'Locked';
   const isFailed = task.status === 'Failed';
